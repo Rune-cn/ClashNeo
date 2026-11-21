@@ -218,9 +218,9 @@ class ClashNeoComposeActivity : ComponentActivity() {
             var overrideState by remember { mutableStateOf(OverrideSettingsUiState()) }
             var appSettingsState by remember { mutableStateOf(AppSettingsUiState()) }
             var propertiesState by remember { mutableStateOf(PropertiesUiState()) }
-            var logsState by remember { mutableStateOf(LogsUiState()) }
+
             var providersState by remember { mutableStateOf(ProvidersUiState()) }
-            var filesState by remember { mutableStateOf(FilesUiState()) }
+
             var metaState by remember { mutableStateOf(MetaFeatureUiState()) }
 
             ClashNeoTheme(
@@ -341,6 +341,11 @@ private fun ClashNeoApp(
     val tunnel by controller.tunnel.collectAsStateWithLifecycle()
     val proxies by controller.proxies.collectAsStateWithLifecycle()
     val profiles by controller.profiles.collectAsStateWithLifecycle()
+    // Logs and files are read from the filesystem, so the controller owns them; keeping a local
+    // copy here would leave the lists permanently empty, which is what the empty states were
+    // actually showing before.
+    val logsState by controller.logs.collectAsStateWithLifecycle()
+    val filesState by controller.files.collectAsStateWithLifecycle()
 
     val context = LocalContext.current
     val uriHandler = androidx.compose.ui.platform.LocalUriHandler.current
@@ -643,6 +648,7 @@ private fun ClashNeoApp(
                 }
 
                 entry<Route.Logs>(swipeDismiss = swipeDirection) {
+                    LaunchedEffect(Unit) { controller.refreshLogs() }
                     LogsPage(
                         state = logsState,
                         modifier = Modifier.fillMaxSize(),
@@ -660,10 +666,17 @@ private fun ClashNeoApp(
                 }
 
                 entry<Route.Files>(swipeDismiss = swipeDirection) {
+                    LaunchedEffect(Unit) { controller.refreshFiles() }
                     FilesPage(
                         state = filesState,
                         modifier = Modifier.fillMaxSize(),
                         onBack = popBack,
+                        onOpenEntry = { entry ->
+                            // Directories drill down; files have no viewer yet, so tapping one is
+                            // a no-op rather than a dead-end screen.
+                            if (entry.directory) controller.enterDirectory(entry.name)
+                        },
+                        onNavigateUp = controller::navigateUpDirectory,
                     )
                 }
 

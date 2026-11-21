@@ -3,6 +3,13 @@ package io.github.neo.clash.ui
 
 import android.content.Context
 import android.content.Intent
+import io.github.neo.clash.ui.page.files.CrumbUi
+import io.github.neo.clash.ui.page.files.FileEntryUi
+import io.github.neo.clash.ui.page.files.FilesUiState
+import io.github.neo.clash.ui.page.logs.LogFileUi
+import io.github.neo.clash.ui.page.logs.LogsUiState
+import io.github.neo.clash.util.clashDir
+import io.github.neo.clash.util.logsDir
 import io.github.neo.clash.R
 import io.github.neo.clash.common.log.Log
 import io.github.neo.clash.core.bridge.Bridge
@@ -68,6 +75,15 @@ class ClashUiController(
 
     private val _settings = MutableStateFlow(SettingsUiState())
     val settings: StateFlow<SettingsUiState> = _settings.asStateFlow()
+
+    private val _logs = MutableStateFlow(LogsUiState())
+    val logs: StateFlow<LogsUiState> = _logs.asStateFlow()
+
+    private val _files = MutableStateFlow(FilesUiState())
+    val files: StateFlow<FilesUiState> = _files.asStateFlow()
+
+    /** Directory the file browser is currently showing. */
+    private var currentDir: java.io.File = context.clashDir
 
     private val _messages = MutableStateFlow<ChannelMessages?>(null)
 
@@ -595,6 +611,89 @@ class ClashUiController(
      * nothing the editor is opened — the same rule `ProfilesActivity` applies through
      * `ProfilesDesign.requestSave`.
      */
+    /**
+     * Lists saved log files, newest first.
+     *
+     * Reads the filesystem directly: the log service writes plain files and there is no query API
+     * for them, so a listing is the only honest source.
+     */
+    fun refreshLogs() {
+        val files = context.logsDir.listFiles()
+            ?.mapNotNull { io.github.neo.clash.design.model.LogFile.parseFromFileName(it.name) }
+            ?.sortedByDescending { it.date.time }
+            ?: emptyList()
+
+        val formatter = java.text.SimpleDateFormat("yyyy-MM-dd HH:mm", java.util.Locale.getDefault())
+        _logs.value = LogsUiState(
+            files = files.map { LogFileUi(it.fileName, formatter.format(it.date)) },
+            liveStreaming = io.github.neo.clash.LogcatService.running,
+        )
+    }
+
+    /**
+     * Lists the core's working directory.
+     *
+     * This is what the file browser shows, and it is the directory profiles and the kernel actually
+     * read, so what the user sees here is what the core sees.
+     */
+    fun refreshFiles() {
+        val root = context.clashDir
+        // The current directory can disappear (deleted, or cleared from another screen); fall back
+        // to the root instead of showing an empty listing with a stale path.
+        if (!currentDir.exists() || !currentDir.canonicalPath.startsWith(root.canonicalPath)) {
+            currentDir = root
+        }
+
+        val entries = currentDir.listFiles()
+            ?.sortedWith(compareBy({ !it.isDirectory }, { it.name.lowercase() }))
+            ?.map { file ->
+                FileEntryUi(
+                    name = file.name,
+                    directory = file.isDirectory,
+                    sizeLabel = if (file.isDirectory) null else formatSize(file.length()),
+                )
+            }
+            ?: emptyList()
+
+        val crumbs = buildList {
+            add(CrumbUi(root.name, currentDir == root))
+            val relative = currentDir.relativeTo(root).path
+            if (relative.isNotEmpty() && relative != ".") {
+                var acc = root
+                relative.split(java.io.File.separatorChar).forEach { part ->
+                    acc = java.io.File(acc, part)
+                    add(CrumbUi(part, acc == currentDir))
+                }
+            }
+        }
+
+        _files.value = FilesUiState(path = crumbs, entries = entries)
+    }
+
+    /** Opens a subdirectory of the current directory. */
+    fun enterDirectory(name: String) {
+        val next = java.io.File(currentDir, name)
+        if (next.isDirectory) {
+            currentDir = next
+            refreshFiles()
+        }
+    }
+
+    /** Goes up one level; stays at the working directory root. */
+    fun navigateUpDirectory() {
+        val root = context.clashDir
+        if (currentDir != root) {
+            currentDir = currentDir.parentFile ?: root
+            refreshFiles()
+        }
+    }
+
+    private fun formatSize(bytes: Long): String = when {
+        bytes < 1024 -> "$bytes B"
+        bytes < 1024 * 1024 -> "${bytes / 1024} KB"
+        else -> String.format(java.util.Locale.US, "%.1f MB", bytes / 1024.0 / 1024.0)
+    }
+
     /** Surfaces a one-off message to the host, for paths that have nothing else to report. */
     fun postMessage(text: String, isError: Boolean = false) {
         _messages.value = ChannelMessages.Text(text = text, isError = isError)
