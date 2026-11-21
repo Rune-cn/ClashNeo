@@ -595,6 +595,42 @@ class ClashUiController(
      * nothing the editor is opened — the same rule `ProfilesActivity` applies through
      * `ProfilesDesign.requestSave`.
      */
+    /** Surfaces a one-off message to the host, for paths that have nothing else to report. */
+    fun postMessage(text: String, isError: Boolean = false) {
+        _messages.value = ChannelMessages.Text(text = text, isError = isError)
+    }
+
+    /**
+     * Creates a profile and refreshes the list.
+     *
+     * [name] is derived from the source when the caller has nothing better: the core requires a
+     * non-blank name, and asking the user for one before they have even seen the profile succeed is
+     * friction for no gain — they can rename it in the properties screen afterwards.
+     */
+    fun createProfile(type: Profile.Type, name: String, source: String) {
+        if (name.isBlank() || source.isBlank()) {
+            postMessage(context.getString(R.string.add_profile_invalid), isError = true)
+            return
+        }
+
+        scope.launch {
+            val result = runCatching {
+                withProfile { create(type, name, source, null) }
+            }
+
+            result.onSuccess {
+                refreshProfiles()
+                postMessage(context.getString(R.string.add_profile_succeeded))
+            }.onFailure { error ->
+                Log.w("Create profile: $error", error)
+                postMessage(
+                    error.message ?: context.getString(R.string.add_profile_failed),
+                    isError = true,
+                )
+            }
+        }
+    }
+
     fun activateProfile(profile: Profile) {
         if (profile.active)
             return

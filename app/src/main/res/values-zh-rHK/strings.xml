@@ -264,4 +264,16 @@
     <string name="logcat_waiting">正在等待日誌輸出…</string>
     <string name="logcat_stopped">日誌服務未執行</string>
     <string name="logcat">即時日誌</string>
+    <string name="add_profile_from_file">從檔案</string>
+    <string name="add_profile_from_file_summary">匯入本機已有的設定檔</string>
+    <string name="add_profile_from_url">從連結</string>
+    <string name="add_profile_from_url_summary">下載訂閱連結</string>
+    <string name="add_profile_from_qr">從 QR 碼</string>
+    <string name="add_profile_from_qr_summary">掃描另一台裝置上的連結</string>
+    <string name="add_profile_confirm">新增設定檔</string>
+    <string name="profile_url_hint">https://…</string>
+    <string name="add_profile_invalid">名稱與來源不能為空</string>
+    <string name="add_profile_succeeded">設定檔已新增</string>
+    <string name="add_profile_failed">新增設定檔失敗</string>
+    <string name="add_profile_qr_unavailable">尚未支援 QR 碼匯入</string>
 </resources>

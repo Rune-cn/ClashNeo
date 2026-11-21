@@ -283,4 +283,16 @@
     <string name="logcat_waiting">Waiting for log output…</string>
     <string name="logcat_stopped">The log service is not running</string>
     <string name="logcat">Live log</string>
+    <string name="add_profile_from_file">From file</string>
+    <string name="add_profile_from_file_summary">Import a configuration already on this device</string>
+    <string name="add_profile_from_url">From URL</string>
+    <string name="add_profile_from_url_summary">Download a subscription link</string>
+    <string name="add_profile_from_qr">From QR code</string>
+    <string name="add_profile_from_qr_summary">Scan a link from another device</string>
+    <string name="add_profile_confirm">Add profile</string>
+    <string name="profile_url_hint">https://…</string>
+    <string name="add_profile_invalid">Name and source must not be blank</string>
+    <string name="add_profile_succeeded">Profile added</string>
+    <string name="add_profile_failed">Failed to add profile</string>
+    <string name="add_profile_qr_unavailable">QR import is not available yet</string>
 </resources>

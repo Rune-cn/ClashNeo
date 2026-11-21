@@ -33,6 +33,14 @@ import io.github.neo.clash.ui.widget.SettingsSection
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.theme.MiuixTheme
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import io.github.neo.clash.ui.widget.MiuixNavigationItemWidget
+import io.github.neo.clash.ui.widget.MiuixTextField
+import top.yukonga.miuix.kmp.basic.Button
+import top.yukonga.miuix.kmp.window.WindowBottomSheet
 
 /**
  * The 配置 (Profiles) tab.
@@ -48,8 +56,16 @@ fun ProfilesPage(
     modifier: Modifier = Modifier,
     outerPadding: PaddingValues = PaddingValues(),
     onActivate: (Profile) -> Unit,
-    onAddProfile: () -> Unit = {},
+    onAddFromFile: () -> Unit = {},
+    onAddFromUrl: (String) -> Unit = {},
+    onAddFromQr: () -> Unit = {},
 ) {
+    // Sheet state is transient UI, so it lives here rather than being hoisted: no other screen
+    // needs to know whether the add-sheet is open.
+    var showAddSheet by remember { mutableStateOf(false) }
+    var selectedSource by remember { mutableStateOf(ProfileSource.URL) }
+    var urlInput by remember { mutableStateOf("") }
+
     // The FAB is a sibling of the screen, not part of it: it must stay above the list and
     // outside the scrolled content, otherwise it scrolls away and cannot be tapped at the end.
     Box(modifier = modifier.fillMaxSize()) {
@@ -99,7 +115,7 @@ fun ProfilesPage(
         }
 
         FloatingActionButton(
-            onClick = onAddProfile,
+            onClick = { showAddSheet = true },
             modifier = Modifier
                 .align(Alignment.BottomEnd)
                 // Clear the navigation bar: the FAB sits above it rather than on top of it.
@@ -109,6 +125,55 @@ fun ProfilesPage(
                 imageVector = Icons.Rounded.Add,
                 contentDescription = stringResource(R.string.add_profile),
             )
+        }
+
+        // Slides up from the bottom, matching the upstream flow for adding a profile: pick a
+        // source first, then supply only the field that source needs.
+        WindowBottomSheet(
+            show = showAddSheet,
+            onDismissRequest = { showAddSheet = false },
+            title = stringResource(R.string.add_profile),
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 24.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                ProfileSource.entries.forEach { source ->
+                    MiuixNavigationItemWidget(
+                        title = stringResource(source.labelRes),
+                        description = stringResource(source.summaryRes),
+                        onClick = { selectedSource = source },
+                    )
+                }
+
+                if (selectedSource == ProfileSource.URL) {
+                    MiuixTextField(
+                        value = urlInput,
+                        onValueChange = { urlInput = it },
+                        label = stringResource(R.string.profile_url_hint),
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                    )
+                }
+
+                Button(
+                    onClick = {
+                        when (selectedSource) {
+                            ProfileSource.FILE -> onAddFromFile()
+                            ProfileSource.URL -> onAddFromUrl(urlInput.trim())
+                            ProfileSource.QR -> onAddFromQr()
+                        }
+                        showAddSheet = false
+                        urlInput = ""
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp),
+                ) {
+                    Text(text = stringResource(R.string.add_profile_confirm))
+                }
+            }
         }
     }
 
@@ -175,6 +240,23 @@ private fun ActiveMark() {
     )
 }
 
+/** How the user supplies the new profile. */
+enum class ProfileSource { FILE, URL, QR }
+
+private val ProfileSource.labelRes: Int
+    get() = when (this) {
+        ProfileSource.FILE -> R.string.add_profile_from_file
+        ProfileSource.URL -> R.string.add_profile_from_url
+        ProfileSource.QR -> R.string.add_profile_from_qr
+    }
+
+private val ProfileSource.summaryRes: Int
+    get() = when (this) {
+        ProfileSource.FILE -> R.string.add_profile_from_file_summary
+        ProfileSource.URL -> R.string.add_profile_from_url_summary
+        ProfileSource.QR -> R.string.add_profile_from_qr_summary
+    }
+
 @Composable
 private fun MessageScreen(
     pageTitle: String,
@@ -215,4 +297,5 @@ private fun MessageScreen(
             }
         }
     }
-}
+
+    }

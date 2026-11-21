@@ -107,6 +107,7 @@ import io.github.neo.clash.ui.page.licenses.LicensesPage
 import io.github.neo.clash.ui.page.logcat.LogcatLineUi
 import io.github.neo.clash.ui.page.logcat.LogcatPage
 import io.github.neo.clash.ui.page.logcat.LogcatUiState
+import io.github.neo.clash.service.model.Profile
 import io.github.neo.clash.ui.theme.ClashNeoTheme
 import io.github.neo.clash.ui.theme.getMiuixAppBarColor
 import io.github.neo.clash.ui.theme.miuixBlurEffect
@@ -167,6 +168,22 @@ class ClashNeoComposeActivity : ComponentActivity() {
     ) { result ->
         if (result.resultCode == RESULT_OK) {
             controller.onVpnPermissionGranted()
+        }
+    }
+
+    /**
+     * File picker for the "from file" source. `OpenDocument` (not `GetContent`) returns a URI the
+     * service can keep reading after the activity is gone.
+     */
+    private val pickProfileFile = registerForActivityResult(
+        ActivityResultContracts.OpenDocument(),
+    ) { uri ->
+        if (uri != null) {
+            controller.createProfile(
+                type = Profile.Type.File,
+                name = uri.lastPathSegment?.substringAfterLast('/') ?: "profile",
+                source = uri.toString(),
+            )
         }
     }
 
@@ -234,6 +251,7 @@ class ClashNeoComposeActivity : ComponentActivity() {
                     onMetaStateChange = { metaState = it },
                     onRequireRecreate = { recreate() },
                     onHideIconChange = { hidden -> setLauncherIconVisible(!hidden) },
+                    onPickProfileFile = { pickProfileFile.launch(arrayOf("*/*")) },
                     onThemeStateChange = { themeState = it },
                 )
             }
@@ -312,6 +330,7 @@ private fun ClashNeoApp(
     onMetaStateChange: (MetaFeatureUiState) -> Unit,
     onRequireRecreate: () -> Unit,
     onHideIconChange: (Boolean) -> Unit,
+    onPickProfileFile: () -> Unit,
 ) {
     val pagerState = rememberPagerState(pageCount = { Tab.entries.size })
     val scope = rememberCoroutineScope()
@@ -486,6 +505,20 @@ private fun ClashNeoApp(
                                     modifier = Modifier.fillMaxSize(),
                                     outerPadding = PaddingValues(bottom = bottomInset),
                                     onActivate = controller::activateProfile,
+                            onAddFromFile = onPickProfileFile,
+                            onAddFromUrl = { url ->
+                                controller.createProfile(
+                                    type = Profile.Type.Url,
+                                    name = url.substringAfterLast('/').substringBefore('?')
+                                        .ifBlank { "profile" },
+                                    source = url,
+                                )
+                            },
+                            // The QR scanner is a separate concern (camera permission, decoder);
+                            // rather than ship a half-working one, say so.
+                            onAddFromQr = {
+                                controller.postMessage(context.getString(R.string.add_profile_qr_unavailable), isError = true)
+                            },
                                 )
 
                                 Tab.Settings -> SettingsPage(
@@ -556,11 +589,6 @@ private fun ClashNeoApp(
                     AppSettingsPage(
                         state = appSettingsState,
                         onStateChange = onAppSettingsStateChange,
-                        darkModeLabels = listOf(
-                            stringResource(io.github.neo.clash.design.R.string.follow_system_android_10),
-                            stringResource(io.github.neo.clash.design.R.string.always_light),
-                            stringResource(io.github.neo.clash.design.R.string.always_dark),
-                        ),
                         modifier = Modifier.fillMaxSize(),
                         onBack = popBack,
                         onRequireRecreate = onRequireRecreate,

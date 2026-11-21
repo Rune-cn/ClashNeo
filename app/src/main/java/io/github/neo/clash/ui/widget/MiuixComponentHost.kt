@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
 package io.github.neo.clash.ui.widget
 
+import androidx.compose.foundation.layout.WindowInsets
+import top.yukonga.miuix.kmp.basic.Scaffold
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -52,9 +54,8 @@ internal val LocalMiuixTopBarBackdrop = compositionLocalOf<LayerBackdrop?> { nul
 /**
  * Root Miuix surface for both UI styles.
  *
- * This host deliberately does not install a `Scaffold`: it only publishes the ambient scope and the
- * surface colour. Bars (top and bottom) belong to the screen that owns them, and stacking a
- * bar-less Scaffold in the middle of the tree only consumed insets without rendering anything.
+ * This host publishes the ambient scope *and* installs the root `Scaffold`. The Scaffold is what
+ * glass popups attach to; see the note on the call site.
  *
  * @param useOs4 Render the OS4 (glass) presentation when the platform supports render effects.
  * @param useBlur Enable the OS3 backdrop blur path.
@@ -78,15 +79,17 @@ fun MiuixComponentHost(
     }
 
     CompositionLocalProvider(LocalMiuixComponentScope provides scope) {
-        // A Box, not a Scaffold: this host only publishes the ambient scope. Wrapping the tree in a
-        // Scaffold here added one more layer that consumed window insets and contributed no bars,
-        // so its content padding was silently ignored while still shortening nothing — and it made
-        // the page's own Scaffold the third one in the chain. The screen hosts provide the real
-        // bars.
-        Box(
-            modifier = modifier
-                .fillMaxSize()
-                .background(containerColor),
+        // The Scaffold is required, not decorative: OS4 popups set `renderInRootScaffold = true` and
+        // attach their glass surface to the root scaffold. Without one the glass dropdown has
+        // nothing to render into and silently degrades to a flat popup, which is exactly what made
+        // the OS4 selector look unlike the reference.
+        //
+        // `contentWindowInsets = WindowInsets(0)` keeps this layer from consuming the status bar a
+        // second time; the page's own Scaffold owns the bars and their insets.
+        Scaffold(
+            modifier = modifier,
+            containerColor = containerColor,
+            contentWindowInsets = WindowInsets(0),
         ) {
             content(scope)
         }

@@ -9,7 +9,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import io.github.neo.clash.design.R
 import io.github.neo.clash.ui.widget.MiuixBackButton
-import io.github.neo.clash.ui.widget.MiuixDropdownPreference
 import io.github.neo.clash.ui.widget.MiuixPageScaffold
 import io.github.neo.clash.ui.widget.MiuixSwitchWidget
 import io.github.neo.clash.ui.widget.SettingsSection
@@ -17,15 +16,13 @@ import io.github.neo.clash.ui.widget.SettingsSection
 /**
  * Application-level preferences, the Compose counterpart of `AppSettingsDesign`.
  *
- * Two switches carry a side effect the XML screen handled by restarting every activity:
- * [hideFromRecents] and the dark-mode choice change how the task looks, and Android only applies
- * that on (re)creation. The page therefore reports them through [onRequireRecreate] instead of
- * pretending a plain state write is enough.
+ * Dark mode is deliberately absent: it now lives in Theme settings together with the palette, so
+ * having a second control here meant two switches writing the same preference. [hideFromRecents]
+ * still reports through [onRequireRecreate], because Android only applies that on (re)creation.
  */
 @Immutable
 data class AppSettingsUiState(
     val autoRestart: Boolean = true,
-    val darkModeIndex: Int = 0,
     val hideAppIcon: Boolean = false,
     val hideFromRecents: Boolean = false,
     val dynamicNotification: Boolean = true,
@@ -42,7 +39,6 @@ data class AppSettingsUiState(
 fun AppSettingsPage(
     state: AppSettingsUiState,
     onStateChange: (AppSettingsUiState) -> Unit,
-    darkModeLabels: List<String>,
     modifier: Modifier = Modifier,
     outerPadding: PaddingValues = PaddingValues(),
     onBack: () -> Unit = {},
@@ -70,18 +66,6 @@ fun AppSettingsPage(
 
         item {
             SettingsSection(title = stringResource(R.string.interface_)) {
-                MiuixDropdownPreference(
-                    title = stringResource(R.string.dark_mode),
-                    items = darkModeLabels,
-                    selectedIndex = state.darkModeIndex.coerceIn(
-                        0,
-                        (darkModeLabels.size - 1).coerceAtLeast(0),
-                    ),
-                    onSelectedIndexChange = { index ->
-                        onStateChange(state.copy(darkModeIndex = index))
-                        onRequireRecreate()
-                    },
-                )
                 MiuixSwitchWidget(
                     title = stringResource(R.string.hide_app_icon_title),
                     description = stringResource(R.string.hide_app_icon_desc),
