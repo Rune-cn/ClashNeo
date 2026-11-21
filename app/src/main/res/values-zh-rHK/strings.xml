@@ -294,4 +294,6 @@
     <string name="profile_importing">正在下載設定檔…</string>
     <string name="profile_imported">設定檔已匯入</string>
     <string name="profile_import_failed">匯入設定檔失敗</string>
+    <string name="override_load_failed">無法讀取核心覆寫設定</string>
+    <string name="override_save_failed">無法儲存核心覆寫設定</string>
 </resources>

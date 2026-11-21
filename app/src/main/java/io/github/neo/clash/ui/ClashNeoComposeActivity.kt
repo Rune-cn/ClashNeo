@@ -59,6 +59,9 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import io.github.neo.clash.BuildConfig
 import io.github.neo.clash.NetworkSettingsActivity
+import io.github.neo.clash.RestartReceiver
+import io.github.neo.clash.service.store.ServiceStore
+import io.github.neo.clash.common.util.componentName
 import io.github.neo.clash.R
 import io.github.neo.clash.LogcatService
 import io.github.neo.clash.SettingsActivity
@@ -213,10 +216,8 @@ class ClashNeoComposeActivity : ComponentActivity() {
             var themeState by remember { mutableStateOf(ThemeUiState()) }
             // Hoisted here (not inside the sub-page) so the switches keep their values when the
             // user navigates back to the tabs and returns.
-            var networkState by remember { mutableStateOf(NetworkSettingsUiState()) }
-            var accessState by remember { mutableStateOf(AccessControlUiState()) }
-            var overrideState by remember { mutableStateOf(OverrideSettingsUiState()) }
-            var appSettingsState by remember { mutableStateOf(AppSettingsUiState()) }
+            var networkState by remember { mutableStateOf(loadNetworkState()) }
+            var appSettingsState by remember { mutableStateOf(loadAppSettingsState()) }
             var propertiesState by remember { mutableStateOf(PropertiesUiState()) }
 
             var providersState by remember { mutableStateOf(ProvidersUiState()) }
@@ -237,13 +238,15 @@ class ClashNeoComposeActivity : ComponentActivity() {
                     controller = controller,
                     themeState = themeState,
                     networkState = networkState,
-                    onNetworkStateChange = { networkState = it },
-                    accessState = accessState,
-                    onAccessStateChange = { accessState = it },
-                    overrideState = overrideState,
-                    onOverrideStateChange = { overrideState = it },
+                    onNetworkStateChange = {
+                        networkState = it
+                        persistNetworkState(it)
+                    },
                     appSettingsState = appSettingsState,
-                    onAppSettingsStateChange = { appSettingsState = it },
+                    onAppSettingsStateChange = {
+                        appSettingsState = it
+                        persistAppSettingsState(it)
+                    },
                     propertiesState = propertiesState,
                     onPropertiesStateChange = { propertiesState = it },
                     providersState = providersState,
@@ -263,6 +266,61 @@ class ClashNeoComposeActivity : ComponentActivity() {
         // The service is started from outside this screen too (quick settings tile), so the state
         // is re-read on every appearance rather than trusting what was last rendered.
         controller.refreshAll()
+    }
+
+    /**
+     * Reads the network screen's state from the stores the service actually consults.
+     *
+     * These two switches were previously activity-local: flipping them changed the UI and nothing
+     * else, so the tunnel kept behaving exactly as before.
+     */
+    private fun loadNetworkState(): NetworkSettingsUiState {
+        val ui = UiStore(this)
+        val service = ServiceStore(this)
+        return NetworkSettingsUiState(
+            enableVpn = ui.enableVpn,
+            bypassPrivateNetwork = service.bypassPrivateNetwork,
+            dnsHijacking = service.dnsHijacking,
+            allowBypass = service.allowBypass,
+            allowIpv6 = service.allowIpv6,
+            systemProxy = service.systemProxy,
+        )
+    }
+
+    /** Writes the network screen's state back to the same stores. */
+    private fun persistNetworkState(state: NetworkSettingsUiState) {
+        UiStore(this).enableVpn = state.enableVpn
+        ServiceStore(this).apply {
+            bypassPrivateNetwork = state.bypassPrivateNetwork
+            dnsHijacking = state.dnsHijacking
+            allowBypass = state.allowBypass
+            allowIpv6 = state.allowIpv6
+            systemProxy = state.systemProxy
+        }
+    }
+
+    /**
+     * Reads the app screen's state from its real sources: two component-enabled flags and two
+     * preferences. The previous version started from defaults, so the switches showed the wrong
+     * position after a restart and toggling them persisted nothing.
+     */
+    private fun loadAppSettingsState(): AppSettingsUiState {
+        val ui = UiStore(this)
+        return AppSettingsUiState(
+            autoRestart = packageManager.getComponentEnabledSetting(RestartReceiver::class.componentName) ==
+                PackageManager.COMPONENT_ENABLED_STATE_ENABLED,
+            hideAppIcon = packageManager.getComponentEnabledSetting(mainActivityAlias) ==
+                PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
+            hideFromRecents = ui.hideFromRecents,
+            dynamicNotification = ServiceStore(this).dynamicNotification,
+            serviceRunning = io.github.neo.clash.remote.Remote.broadcasts.clashRunning,
+        )
+    }
+
+    /** Persists the two app-screen values that are plain preferences. */
+    private fun persistAppSettingsState(state: AppSettingsUiState) {
+        UiStore(this).hideFromRecents = state.hideFromRecents
+        ServiceStore(this).dynamicNotification = state.dynamicNotification
     }
 
     /**
@@ -315,9 +373,7 @@ private fun ClashNeoApp(
     onThemeStateChange: (ThemeUiState) -> Unit,
     networkState: NetworkSettingsUiState,
     onNetworkStateChange: (NetworkSettingsUiState) -> Unit,
-    accessState: AccessControlUiState,
     onAccessStateChange: (AccessControlUiState) -> Unit,
-    overrideState: OverrideSettingsUiState,
     onOverrideStateChange: (OverrideSettingsUiState) -> Unit,
     appSettingsState: AppSettingsUiState,
     onAppSettingsStateChange: (AppSettingsUiState) -> Unit,
@@ -341,6 +397,8 @@ private fun ClashNeoApp(
     // copy here would leave the lists permanently empty, which is what the empty states were
     // actually showing before.
     val logsState by controller.logs.collectAsStateWithLifecycle()
+    val overrideState by controller.overrideState.collectAsStateWithLifecycle()
+    val accessState by controller.access.collectAsStateWithLifecycle()
     val filesState by controller.files.collectAsStateWithLifecycle()
 
     val context = LocalContext.current
@@ -598,9 +656,14 @@ private fun ClashNeoApp(
                 }
 
                 entry<Route.AccessControl>(swipeDismiss = swipeDirection) {
+                    LaunchedEffect(Unit) { controller.refreshAccessControl() }
                     AccessControlPage(
                         state = accessState,
-                        onStateChange = onAccessStateChange,
+                        onStateChange = {
+                            // Update the screen immediately, then persist: the store write is what
+                            // the service reads when it rebuilds the rule set.
+                            controller.saveAccessControl(it)
+                        },
                         modifier = Modifier.fillMaxSize(),
                         onBack = popBack,
                     )
@@ -724,11 +787,16 @@ private fun ClashNeoApp(
                 }
 
                 entry<Route.Override>(swipeDismiss = swipeDirection) {
+                    LaunchedEffect(Unit) { controller.refreshOverride() }
                     OverrideSettingsPage(
                         state = overrideState,
-                        onStateChange = onOverrideStateChange,
-                        logLevels = listOf("info", "warning", "error", "debug", "silent"),
-                        modes = listOf("rule", "global", "direct"),
+                        onStateChange = controller::saveOverride,
+                        // Indices map straight onto the core's enums, so the lists must stay in
+                        // declaration order.
+                        logLevels = io.github.neo.clash.core.model.LogMessage.Level.entries
+                            .map { it.name },
+                        modes = io.github.neo.clash.core.model.TunnelState.Mode.entries
+                            .map { it.name },
                         modifier = Modifier.fillMaxSize(),
                         onBack = popBack,
                     )

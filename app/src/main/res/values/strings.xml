@@ -313,4 +313,6 @@
     <string name="profile_importing">Downloading the profile…</string>
     <string name="profile_imported">Profile imported</string>
     <string name="profile_import_failed">Failed to import the profile</string>
+    <string name="override_load_failed">Could not read the core override</string>
+    <string name="override_save_failed">Could not save the core override</string>
 </resources>

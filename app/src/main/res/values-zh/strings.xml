@@ -306,4 +306,6 @@
     <string name="profile_importing">正在下载配置…</string>
     <string name="profile_imported">配置已导入</string>
     <string name="profile_import_failed">导入配置失败</string>
+    <string name="override_load_failed">无法读取内核覆写配置</string>
+    <string name="override_save_failed">无法保存内核覆写配置</string>
 </resources>

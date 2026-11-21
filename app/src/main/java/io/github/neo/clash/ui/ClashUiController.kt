@@ -8,8 +8,14 @@ import io.github.neo.clash.ui.page.files.FileEntryUi
 import io.github.neo.clash.ui.page.files.FilesUiState
 import io.github.neo.clash.ui.page.logs.LogFileUi
 import io.github.neo.clash.ui.page.logs.LogsUiState
+import io.github.neo.clash.ui.page.override.OverrideSettingsUiState
 import io.github.neo.clash.util.clashDir
 import io.github.neo.clash.util.logsDir
+import io.github.neo.clash.ui.page.access.AccessApp
+import io.github.neo.clash.ui.page.access.AccessControlUiState
+import io.github.neo.clash.ui.page.access.AccessMode
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import io.github.neo.clash.R
 import io.github.neo.clash.common.log.Log
 import io.github.neo.clash.core.bridge.Bridge
@@ -75,6 +81,12 @@ class ClashUiController(
 
     private val _settings = MutableStateFlow(SettingsUiState())
     val settings: StateFlow<SettingsUiState> = _settings.asStateFlow()
+
+    private val _access = MutableStateFlow(AccessControlUiState())
+    val access: StateFlow<AccessControlUiState> = _access.asStateFlow()
+
+    private val _override = MutableStateFlow(OverrideSettingsUiState())
+    val overrideState: StateFlow<OverrideSettingsUiState> = _override.asStateFlow()
 
     private val _logs = MutableStateFlow(LogsUiState())
     val logs: StateFlow<LogsUiState> = _logs.asStateFlow()
@@ -611,6 +623,148 @@ class ClashUiController(
      * nothing the editor is opened — the same rule `ProfilesActivity` applies through
      * `ProfilesDesign.requestSave`.
      */
+    /**
+     * Loads the installed-app list plus the persisted selection.
+     *
+     * The list comes from `PackageManager` (the manifest already holds `QUERY_ALL_PACKAGES`), and the
+     * selection from `ServiceStore`, which is the store the service reads when it builds the rule
+     * set. Before this the screen had an empty list and nothing to select.
+     */
+    fun refreshAccessControl() {
+        scope.launch {
+            val apps = withContext(Dispatchers.IO) {
+                val pm = context.packageManager
+                pm.getInstalledApplications(0).map { info ->
+                    AccessApp(
+                        packageName = info.packageName,
+                        label = runCatching {
+                            pm.getApplicationLabel(info).toString()
+                        }.getOrDefault(info.packageName),
+                        system = (info.flags and android.content.pm.ApplicationInfo.FLAG_SYSTEM) != 0,
+                    )
+                }.sortedBy { it.label.lowercase() }
+            }
+
+            val store = ServiceStore(context)
+            val mode = when (store.accessControlMode) {
+                AccessControlMode.AcceptAll -> AccessMode.ACCEPT
+                AccessControlMode.AcceptSelected -> AccessMode.ACCEPT
+                AccessControlMode.DenySelected -> AccessMode.REJECT
+            }
+
+            _access.value = AccessControlUiState(
+                apps = apps,
+                selected = store.accessControlPackages,
+                mode = mode,
+            )
+        }
+    }
+
+    /**
+     * Saves the selection.
+     *
+     * The store keeps one set plus a three-way mode. Choosing "accept" with a non-empty set means
+     * only the selected apps are proxied; "reject" means everything except them. An empty set in
+     * either case means "no restriction", which maps back to `AcceptAll`.
+     */
+    fun saveAccessControl(state: AccessControlUiState) {
+        // Reflect the change immediately; the screen reads this flow, so persisting alone would
+        // leave the checkbox visibly stuck in its old position.
+        _access.value = state
+
+        val store = ServiceStore(context)
+        store.accessControlPackages = state.selected
+        store.accessControlMode = when {
+            state.selected.isEmpty() -> AccessControlMode.AcceptAll
+            state.mode == AccessMode.ACCEPT -> AccessControlMode.AcceptSelected
+            else -> AccessControlMode.DenySelected
+        }
+    }
+
+    /**
+     * Reads the persisted override from the core.
+     *
+     * Overrides live in the core, not in a preferences file, so the only truthful source is
+     * `queryOverride`. Without this the screen showed defaults that had no relation to the running
+     * configuration.
+     */
+    fun refreshOverride() {
+        scope.launch {
+            val result = runCatching {
+                withClash { queryOverride(io.github.neo.clash.core.Clash.OverrideSlot.Persist) }
+            }
+
+            result.onSuccess { cfg ->
+                _override.value = OverrideSettingsUiState(
+                    httpPort = cfg.httpPort?.toString().orEmpty(),
+                    socksPort = cfg.socksPort?.toString().orEmpty(),
+                    mixedPort = cfg.mixedPort?.toString().orEmpty(),
+                    redirectPort = cfg.redirectPort?.toString().orEmpty(),
+                    tproxyPort = cfg.tproxyPort?.toString().orEmpty(),
+                    allowLan = cfg.allowLan ?: false,
+                    allowIpv6 = cfg.ipv6 ?: false,
+                    bindAddress = cfg.bindAddress.orEmpty(),
+                    authentication = !cfg.authentication.isNullOrEmpty(),
+                    externalController = cfg.externalController.orEmpty(),
+                    logLevelIndex = cfg.logLevel?.let { level ->
+                        io.github.neo.clash.core.model.LogMessage.Level.entries
+                            .indexOf(level)
+                    } ?: 0,
+                    modeIndex = cfg.mode?.let { mode ->
+                        io.github.neo.clash.core.model.TunnelState.Mode.entries.indexOf(mode)
+                    } ?: 0,
+                )
+            }.onFailure { error ->
+                Log.w("Query override: $error", error)
+                postMessage(
+                    error.message ?: context.getString(R.string.override_load_failed),
+                    isError = true,
+                )
+            }
+        }
+    }
+
+    /**
+     * Writes the override back to the core.
+     *
+     * The current override is re-read first and only the fields this screen owns are replaced:
+     * sending a fresh object would silently drop `secret`, `hosts` and the CORS block, which have no
+     * editor here.
+     */
+    fun saveOverride(state: OverrideSettingsUiState) {
+        scope.launch {
+            val result = runCatching {
+                withClash {
+                    val current = queryOverride(io.github.neo.clash.core.Clash.OverrideSlot.Persist)
+                    val next = current.copy(
+                        httpPort = state.httpPort.toIntOrNull(),
+                        socksPort = state.socksPort.toIntOrNull(),
+                        mixedPort = state.mixedPort.toIntOrNull(),
+                        redirectPort = state.redirectPort.toIntOrNull(),
+                        tproxyPort = state.tproxyPort.toIntOrNull(),
+                        allowLan = state.allowLan,
+                        ipv6 = state.allowIpv6,
+                        bindAddress = state.bindAddress.takeIf { it.isNotBlank() },
+                        externalController = state.externalController.takeIf { it.isNotBlank() },
+                        logLevel = io.github.neo.clash.core.model.LogMessage.Level.entries
+                            .getOrNull(state.logLevelIndex),
+                        mode = io.github.neo.clash.core.model.TunnelState.Mode.entries
+                            .getOrNull(state.modeIndex),
+                    )
+                    patchOverride(io.github.neo.clash.core.Clash.OverrideSlot.Persist, next)
+                }
+            }
+
+            result.onFailure { error ->
+                Log.w("Save override: $error", error)
+                postMessage(
+                    error.message ?: context.getString(R.string.override_save_failed),
+                    isError = true,
+                )
+            }
+        }
+    }
+
     /**
      * Lists saved log files, newest first.
      *
