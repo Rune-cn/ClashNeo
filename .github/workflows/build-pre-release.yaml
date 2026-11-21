@@ -5,6 +5,11 @@ on:
     branches:
       - main
 
+# `packages: read` allows resolving the miuix snapshots from GitHub Packages.
+permissions:
+  contents: read
+  packages: read
+
 jobs:
   BuildPreRelease:
     runs-on: ubuntu-latest
@@ -23,6 +28,16 @@ jobs:
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v5
+
+      # miuix snapshots are published to GitHub Packages, which never allows anonymous access.
+      # The Gradle build reads `gpr.user` / `gpr.key` from ~/.gradle/gradle.properties.
+      - name: Configure GitHub Packages credentials
+        run: |
+          mkdir -p ~/.gradle
+          {
+            echo "gpr.user=${{ github.actor }}"
+            echo "gpr.key=${{ secrets.GITHUB_TOKEN }}"
+          } >> ~/.gradle/gradle.properties
 
       - name: Setup Go
         uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c

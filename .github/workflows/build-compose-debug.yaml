@@ -51,16 +51,19 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
 
       # The Go kernel is compiled as part of the app, so the toolchain has to be present even
-      # though this workflow is about the Compose layer.
+      # though this workflow is about the Compose layer. It must be the MetaCubeX fork: the patches
+      # below modify arch-specific runtime files that only exist in that distribution.
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.24'
+          go-download-base-url: 'https://github.com/MetaCubeX/go/releases/download/build'
+          go-version: '1.26'
 
+      # Applied to `GOROOT` so the kernel builds on Android; without them the Go runtime does not
+      # link against the NDK sysroot.
       - name: Apply Go patches
         run: |
           cd "$(go env GOROOT)"
-          shopt -s nullglob
           for p in "$GITHUB_WORKSPACE"/.github/patch/*.patch; do
             patch --verbose -p 1 < "$p"
           done
