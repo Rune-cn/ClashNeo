@@ -8,8 +8,11 @@ on:
         required: true
 
 # `packages: read` allows resolving the miuix snapshots from GitHub Packages.
+# `contents: write` is required: the job rewrites the version in build.gradle.kts, commits it,
+# tags the result and pushes. With `read` the version bump succeeded and the push was rejected,
+# which is exactly how the first release attempt failed.
 permissions:
-  contents: read
+  contents: write
   packages: read
 
 jobs:
