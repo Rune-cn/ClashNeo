@@ -147,10 +147,12 @@ subprojects {
 
         ndkVersion = "29.0.14206865"
 
-        // miuix AARs declare `minCompileSdk=37`, so the whole project compiles against API 37
-        // while `targetSdk` stays at 35 to avoid changing runtime behaviour of the XML UI.
+        // miuix AARs declare `minCompileSdk=37.2`, so the whole project compiles against that
+        // minor while `targetSdk` stays at 35 to avoid changing the XML UI's runtime behaviour.
         // `compileSdk` is the AGP 9 spelling; `compileSdkVersion(Int)` is deprecated for 10.0.
+        // The trailing `.2` matters: 37.0 is rejected by the AAR metadata check.
         compileSdk = 37
+        compileSdkMinor = 2
 
         if (isApp) {
             // AGP 9 replaced `packagingOptions { resources { } }` with `packaging.resources`.
