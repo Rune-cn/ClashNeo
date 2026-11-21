@@ -67,6 +67,7 @@ import io.github.neo.clash.LogcatService
 import io.github.neo.clash.SettingsActivity
 import io.github.neo.clash.common.util.intent
 import io.github.neo.clash.util.logsDir
+import io.github.neo.clash.design.store.UiStore
 import io.github.neo.clash.design.store.UiStore.Companion.mainActivityAlias
 import io.github.neo.clash.ui.animation.predictiveback.appNavTransition
 import io.github.neo.clash.ui.library.FloatingBottomBar
@@ -389,8 +390,6 @@ private fun ClashNeoApp(
     onThemeStateChange: (ThemeUiState) -> Unit,
     networkState: NetworkSettingsUiState,
     onNetworkStateChange: (NetworkSettingsUiState) -> Unit,
-    onAccessStateChange: (AccessControlUiState) -> Unit,
-    onOverrideStateChange: (OverrideSettingsUiState) -> Unit,
     appSettingsState: AppSettingsUiState,
     onAppSettingsStateChange: (AppSettingsUiState) -> Unit,
     propertiesState: PropertiesUiState,
