@@ -12,6 +12,8 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
@@ -68,6 +70,10 @@ fun ControlPage(
         verticalPadding = 12.dp,
     ) {
         item {
+            Spacer(modifier = Modifier.height(4.dp))
+        }
+
+        item {
             StatusCard(state = state)
         }
 
@@ -76,9 +82,17 @@ fun ControlPage(
         }
 
         item {
+            Spacer(modifier = Modifier.height(8.dp))
+        }
+
+        item {
             SettingsSection(title = stringResource(R.string.section_status)) {
                 StatusRows(state = state)
             }
+        }
+
+        item {
+            Spacer(modifier = Modifier.height(8.dp))
         }
 
         item {
@@ -187,7 +201,8 @@ private fun ToggleButton(phase: TunnelPhase, onToggle: () -> Unit) {
         onClick = onToggle,
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 8.dp),
+            .height(52.dp)
+            .padding(vertical = 6.dp),
         enabled = !pending,
     ) {
         Text(
@@ -277,17 +292,17 @@ private fun StatusCard(state: TunnelUiState) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .heightIn(min = 148.dp),
+                .heightIn(min = 180.dp),
         ) {
             Box(
                 modifier = Modifier
                     .matchParentSize()
-                    .offset(42.dp, 22.dp),
+                    .offset(38.dp, 16.dp),
                 contentAlignment = Alignment.BottomEnd,
             ) {
                 Icon(
                     modifier = Modifier
-                        .size(124.dp)
+                        .size(148.dp)
                         .rotate(rotation),
                     imageVector = glyph,
                     tint = accent.copy(alpha = 0.8f),
@@ -298,7 +313,7 @@ private fun StatusCard(state: TunnelUiState) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 22.dp, vertical = 18.dp),
+                    .padding(horizontal = 22.dp, vertical = 22.dp),
                 verticalArrangement = Arrangement.Center,
             ) {
                 Text(
@@ -311,7 +326,7 @@ private fun StatusCard(state: TunnelUiState) {
                             TunnelPhase.Confirming -> R.string.status_waiting_permission
                         },
                     ),
-                    fontSize = 22.sp,
+                    fontSize = 24.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = MiuixTheme.colorScheme.onSurface,
                 )
