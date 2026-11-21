@@ -146,6 +146,11 @@ backdrop 的接线是模糊能否生效的关键：**只挂一个**，且由底�
 
 ## 5. 已知缺口（明确记录，未实现）
 
+> 完整的「哪些界面是真的、哪些是装饰」清单见 [FEATURE_STATUS.md](FEATURE_STATUS.md)。
+> **重要不变式**：`ProfileManager.create` 只建 pending 记录，必须 `commit` 才有配置内容；
+> `patch` 只写 pending 行，同样必须 `commit` 才对已导入副本生效。
+
+
 1. **分享配置为二维码**：原本只在已删除的 Profiles 菜单里，Compose 配置页没有，需要重新实现。
 2. **新建配置的上拉控制台**：目前 FAB 与 `NewProfilePage` 尚未按上游的底部弹出面板形态接好。
 3. **许可证列表是手写的**，不是由构建元数据生成。项目没有引入 licence-metadata 插件；若要自动化，
