@@ -57,3 +57,24 @@
     boolean getDEBUG() return false;
     boolean getRECOVER_STACK_TRACES() return false;
 }
+# kotlinx.serialization looks serializers up reflectively via `KSerializer<T>` companions and
+# `$serializer`/`serializer()` synthetics. R8 cannot see that usage, so the generated serializers
+# must be kept explicitly; otherwise the app builds and then crashes at runtime with
+# "Serializer for class '...' is not found".
+-keepattributes *Annotation*, InnerClasses
+-dontnote kotlinx.serialization.**
+
+# Keep the generated serializer() functions and companion objects for every @Serializable type.
+-keepclassmembers class **$$serializer {
+    *;
+}
+-keepclassmembers,allowobfuscation class ** {
+    *** Companion;
+}
+-keepclasseswithmembers class ** {
+    kotlinx.serialization.KSerializer serializer(...);
+}
+
+# The navigation back stack is persisted with kotlinx.serialization, so the route keys and their
+# serializer lookups must survive shrinking.
+-keep class io.github.neo.clash.ui.navigation.** { *; }

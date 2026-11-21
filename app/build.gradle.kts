@@ -7,6 +7,11 @@ plugins {
     kotlin("kapt")
     // Compose compiler plugin, applied next to Kotlin so the two versions can never drift.
     id("org.jetbrains.kotlin.plugin.compose")
+    // Required by `Route`: `rememberNavBackStack` persists the stack with kotlinx.serialization,
+    // so the compiler plugin must generate the serializers. Without it the `@Serializable`
+    // annotation is inert and the app crashes at launch with
+    // "Serializer for class 'Route$Main' is not found".
+    id("org.jetbrains.kotlin.plugin.serialization")
     id("com.android.application")
 }
 
@@ -19,6 +24,8 @@ dependencies {
     implementation(project(":common"))
 
     implementation(libs.kotlin.coroutine)
+    // Runtime half of `@Serializable` on `Route`; the compiler half is the Gradle plugin above.
+    implementation(libs.kotlin.serialization.json)
     implementation(libs.androidx.core)
     implementation(libs.androidx.activity)
     implementation(libs.androidx.fragment)
