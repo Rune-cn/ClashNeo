@@ -3,14 +3,21 @@ package io.github.neo.clash.ui
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
-import androidx.activity.compose.BackHandler
+import androidx.activity.compose.PredictiveBackHandler
+import androidx.compose.runtime.mutableFloatStateOf
+import kotlinx.coroutines.CancellationException
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
-import androidx.compose.animation.core.Spring
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.pager.HorizontalPager
@@ -30,6 +37,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
@@ -63,6 +71,9 @@ import io.github.neo.clash.ui.page.theme.ThemeSettingsPage
 import io.github.neo.clash.ui.page.theme.ThemeMode
 import io.github.neo.clash.ui.page.theme.ThemeUiState
 import io.github.neo.clash.ui.theme.ClashNeoTheme
+import io.github.neo.clash.ui.theme.getMiuixAppBarColor
+import io.github.neo.clash.ui.theme.miuixBlurEffect
+import top.yukonga.miuix.kmp.blur.LayerBackdrop
 import io.github.neo.clash.ui.widget.MiuixComponentHost
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
@@ -223,6 +234,8 @@ private fun ClashNeoApp(
     // Sub-pages that live above the tabs. An enum (not a boolean per page) keeps the back/return
     // behaviour identical for every one of them.
     var subPage by remember { mutableStateOf(SubPage.None) }
+    // 0f = at rest, 1f = fully swiped away. Driven by the predictive-back gesture.
+    var subPageProgress by remember { mutableFloatStateOf(0f) }
 
     val snackbarHostState = remember { SnackbarHostState() }
 
@@ -254,28 +267,64 @@ private fun ClashNeoApp(
     }
 
     // Back stack, innermost first:
-    //   1. an open sub-page (About/Theme/Network/…) closes,
-    //   2. otherwise a non-first tab returns to the first tab,
+    //   1. an open sub-page (About/Theme/Network/…) closes — with a scale/fade preview while the
+    //      gesture is in progress,
+    //   2. otherwise a non-first tab scrubs back to the first tab, following the finger,
     //   3. otherwise the handler is disabled and the system finishes the activity.
-    // Without this, pressing back inside a sub-page tore the whole app down, because the
-    // sub-page is plain Compose state with nothing for the system to unwind.
-    BackHandler(enabled = subPage != SubPage.None || pagerState.currentPage != 0) {
-        when {
-            subPage != SubPage.None -> subPage = SubPage.None
-            else -> scope.launch { pagerState.animateScrollToPage(0) }
+    //
+    // `PredictiveBackHandler` (not `BackHandler`) is what makes the gesture visible: the system
+    // reports progress 0f→1f, and the UI is expected to move *with* it. A plain BackHandler only
+    // fires at the end, which is why no predictive animation was ever seen.
+    if (subPage != SubPage.None) {
+        PredictiveBackHandler { progress ->
+            try {
+                progress.collect { backEvent ->
+                    // Drive the outgoing sub-page off its own edge as the finger travels.
+                    subPageProgress = backEvent.progress
+                }
+                // Gesture completed: commit the pop.
+                subPageProgress = 0f
+                subPage = SubPage.None
+            } catch (e: CancellationException) {
+                // Gesture cancelled: the page springs back to rest.
+                subPageProgress = 0f
+                throw e
+            }
+        }
+    } else if (pagerState.currentPage != 0) {
+        PredictiveBackHandler { progress ->
+            try {
+                progress.collect { backEvent ->
+                    // Scrub the pager by gesture progress so the previous tab slides in under the
+                    // finger instead of jumping at the end.
+                    pagerState.scrollToPage(
+                        page = 0,
+                        pageOffsetFraction = 1f - backEvent.progress,
+                    )
+                }
+                pagerState.animateScrollToPage(0)
+            } catch (e: CancellationException) {
+                // Settle on the page the gesture started from.
+                pagerState.animateScrollToPage(pagerState.currentPage)
+                throw e
+            }
         }
     }
 
-    val useBlur = true
+    // OS4 forces the floating bar on: its glass pill *is* the OS4 navigation affordance, so the
+    // preference only applies to the OS3 presentation.
+    val floatingBar = themeState.useMiuixOs4 || themeState.useAppleFloatingBar
 
     MiuixComponentHost(
         useOs4 = false,
-        useBlur = useBlur,
+        useBlur = themeState.useBlur,
     ) { scopeState ->
         Scaffold(
             bottomBar = {
                 MiuixBottomBar(
                     selected = pagerState.currentPage,
+                    backdrop = scopeState.contentBackdrop,
+                    floating = floatingBar,
                     onSelect = { index ->
                         subPage = SubPage.None
                         scope.launch { pagerState.animateScrollToPage(index) }
@@ -285,6 +334,19 @@ private fun ClashNeoApp(
             snackbarHost = { SnackbarHost(snackbarHostState) },
             containerColor = androidx.compose.ui.graphics.Color.Transparent,
         ) { padding ->
+            // Shared predictive-back transform for every sub-page. `subPageProgress` is driven by
+            // the gesture, so the page tracks the finger rather than waiting for the release.
+            val subPageModifier = Modifier
+                .fillMaxSize()
+                .graphicsLayer {
+                    val p = subPageProgress.coerceIn(0f, 1f)
+                    translationX = size.width * 0.18f * p
+                    scaleX = 1f - 0.12f * p
+                    scaleY = 1f - 0.12f * p
+                    alpha = 1f - p
+                    clip = false
+                }
+
             when (subPage) {
                 SubPage.About -> {
                     AboutPage(
@@ -293,7 +355,7 @@ private fun ClashNeoApp(
                             versionName = BuildConfig.VERSION_NAME,
                             versionCode = BuildConfig.VERSION_CODE,
                         ),
-                        modifier = Modifier.fillMaxSize(),
+                        modifier = subPageModifier,
                         outerPadding = PaddingValues(bottom = padding.calculateBottomPadding()),
                         onBack = { subPage = SubPage.None },
                     )
@@ -304,7 +366,7 @@ private fun ClashNeoApp(
                     ThemeSettingsPage(
                         state = themeState,
                         onStateChange = onThemeStateChange,
-                        modifier = Modifier.fillMaxSize(),
+                        modifier = subPageModifier,
                         outerPadding = PaddingValues(bottom = padding.calculateBottomPadding()),
                         onBack = { subPage = SubPage.None },
                     )
@@ -315,7 +377,7 @@ private fun ClashNeoApp(
                     NetworkSettingsPage(
                         state = networkState,
                         onStateChange = onNetworkStateChange,
-                        modifier = Modifier.fillMaxSize(),
+                        modifier = subPageModifier,
                         outerPadding = PaddingValues(bottom = padding.calculateBottomPadding()),
                         onBack = { subPage = SubPage.None },
                         onOpenAccessControl = { subPage = SubPage.AccessControl },
@@ -327,7 +389,7 @@ private fun ClashNeoApp(
                     AccessControlPage(
                         state = accessState,
                         onStateChange = onAccessStateChange,
-                        modifier = Modifier.fillMaxSize(),
+                        modifier = subPageModifier,
                         outerPadding = PaddingValues(bottom = padding.calculateBottomPadding()),
                         onBack = { subPage = SubPage.None },
                     )
@@ -342,7 +404,7 @@ private fun ClashNeoApp(
                         // duplicated here so a core change does not silently desync the pickers.
                         logLevels = listOf("info", "warning", "error", "debug", "silent"),
                         modes = listOf("rule", "global", "direct"),
-                        modifier = Modifier.fillMaxSize(),
+                        modifier = subPageModifier,
                         outerPadding = PaddingValues(bottom = padding.calculateBottomPadding()),
                         onBack = { subPage = SubPage.None },
                     )
@@ -364,30 +426,14 @@ private fun ClashNeoApp(
                 beyondViewportPageCount = 1,
                 overscrollEffect = null,
             ) { page ->
-                // Pages scale down slightly while off-centre, which gives the swipe a sense of
-                // depth without the cost of a full page transform.
-                val offset = (pagerState.currentPage - page) + pagerState.currentPageOffsetFraction
-                val scale by animateFloatAsState(
-                    targetValue = (1f - (offset.absoluteValue / 8f)).coerceIn(0.92f, 1f),
-                    animationSpec = spring(
-                        dampingRatio = Spring.DampingRatioNoBouncy,
-                        stiffness = Spring.StiffnessMediumLow,
-                    ),
-                    label = "page-scale",
-                )
-
+                // No page transform: the reference pager is a plain tracking strip, so the tabs
+                // read as siblings in one continuous surface. The earlier scale-down made the
+                // switch feel like a stack of cards instead.
                 val pageOuterPadding = PaddingValues(
                     bottom = padding.calculateBottomPadding(),
                 )
 
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .graphicsLayer {
-                            scaleX = scale
-                            scaleY = scale
-                        },
-                ) {
+                Box(modifier = Modifier.fillMaxSize()) {
                     when (Tab.entries[page]) {
                         Tab.Control -> ControlPage(
                             state = tunnel,
@@ -455,15 +501,52 @@ private fun ThemeMode.resolveDark(): Boolean = when (this) {
 private fun MiuixBottomBar(
     selected: Int,
     onSelect: (Int) -> Unit,
+    backdrop: LayerBackdrop?,
+    floating: Boolean,
 ) {
-    NavigationBar {
-        Tab.entries.forEachIndexed { index, tab ->
-            NavigationBarItem(
-                selected = selected == index,
-                onClick = { onSelect(index) },
-                icon = tab.icon,
-                label = stringResource(tab.labelRes),
-            )
+    val barColor = backdrop.getMiuixAppBarColor()
+
+    val bar: @Composable () -> Unit = {
+        NavigationBar(color = barColor) {
+            Tab.entries.forEachIndexed { index, tab ->
+                NavigationBarItem(
+                    selected = selected == index,
+                    onClick = { onSelect(index) },
+                    icon = tab.icon,
+                    label = stringResource(tab.labelRes),
+                )
+            }
+        }
+    }
+
+    if (!floating) {
+        // Flat variant: the bar sits flush against the bottom edge and only blurs its own band.
+        Box(modifier = Modifier.miuixBlurEffect(backdrop)) {
+            bar()
+        }
+        return
+    }
+
+    // Floating variant: the bar is inset from every edge and gets a rounded, blurred pill. The
+    // extra bottom margin clears the gesture area so the pill never sits under it.
+    val bottomInset = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(
+                start = 24.dp,
+                end = 24.dp,
+                top = 8.dp,
+                bottom = maxOf(16.dp, bottomInset + 8.dp),
+            ),
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .miuixBlurEffect(backdrop = backdrop, shape = RoundedCornerShape(28.dp))
+                .clip(RoundedCornerShape(28.dp)),
+        ) {
+            bar()
         }
     }
 }

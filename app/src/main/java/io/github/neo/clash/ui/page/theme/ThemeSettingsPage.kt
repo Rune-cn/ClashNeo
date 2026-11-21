@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 package io.github.neo.clash.ui.page.theme
 
+import android.os.Build
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
@@ -131,20 +132,33 @@ fun ThemeSettingsPage(
             }
         }
 
-        item {
-            SettingsSection(title = stringResource(R.string.theme_section_navigation)) {
-                PredictiveBackAnimationRow(
-                    current = state.predictiveBackAnimation,
-                    onChange = { onStateChange(state.copy(predictiveBackAnimation = it)) },
-                )
-
-                if (state.predictiveBackAnimation != PredictiveBackAnimation.NONE) {
-                    PredictiveBackDirectionRow(
-                        current = state.predictiveBackExitDirection,
-                        onChange = {
-                            onStateChange(state.copy(predictiveBackExitDirection = it))
-                        },
+        // Predictive back needs the Android 14 progress API (34). Below that the whole section is
+        // hidden rather than offering options the platform cannot honour.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            item {
+                SettingsSection(title = stringResource(R.string.theme_section_navigation)) {
+                    PredictiveBackAnimationRow(
+                        current = state.predictiveBackAnimation,
+                        onChange = { onStateChange(state.copy(predictiveBackAnimation = it)) },
                     )
+
+                    // Only the Scale transition ever reads an exit direction: it is the one that
+                    // animates the outgoing page along a chosen axis. AOSP/Miuix/Classic follow the
+                    // gesture by construction and None has no transition at all, so showing the
+                    // picker for them would be a control with no effect.
+                    AnimatedVisibility(
+                        visible = state.predictiveBackAnimation ==
+                            PredictiveBackAnimation.SCALE,
+                        enter = fadeIn() + expandVertically(),
+                        exit = fadeOut() + shrinkVertically(),
+                    ) {
+                        PredictiveBackDirectionRow(
+                            current = state.predictiveBackExitDirection,
+                            onChange = {
+                                onStateChange(state.copy(predictiveBackExitDirection = it))
+                            },
+                        )
+                    }
                 }
             }
         }
