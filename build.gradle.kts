@@ -97,7 +97,7 @@ subprojects {
         val typedBuildTypes = buildTypes as NamedDomainObjectContainer<ApplicationBuildType>
 
         // AGP 9's `CommonExtension` exposes `defaultConfig` only as the `DefaultConfig`
-        // supertype, which carries neither `applicationId`/`targetSdk`/`versionName"2.11.43"
+        // supertype, which carries neither `applicationId`/`targetSdk`/`versionName"2.11.44"
         // on `ApplicationBaseFlavor`) nor a usable lambda receiver. The shared portion is
         // therefore written against `BaseFlavor`, and the app-only fields behind an `isApp`
         // branch on the concrete subtype. Same values as before, just typed correctly.
@@ -135,7 +135,7 @@ subprojects {
                 appFlavor.targetSdk = 35
 
                 appFlavor.versionName = "2.11.37"
-                appFlavor.versionCode = 211043
+                appFlavor.versionCode = 211044
 
                 resValue("string", "release_name", "v2.11.37")
                 resValue("integer", "release_code", "211037")
