@@ -142,16 +142,6 @@
             android:label="@string/application_crashed"
             android:launchMode="singleTask" />
         <activity
-            android:name=".ProfilesActivity"
-            android:configChanges="uiMode"
-            android:exported="false"
-            android:label="@string/profiles" />
-        <activity
-            android:name=".NewProfileActivity"
-            android:configChanges="uiMode"
-            android:exported="false"
-            android:label="@string/create_profile" />
-        <activity
             android:name=".PropertiesActivity"
             android:configChanges="uiMode"
             android:exported="false"
@@ -161,11 +151,6 @@
             android:configChanges="uiMode"
             android:exported="false"
             android:label="@string/proxy" />
-        <activity
-            android:name=".ProvidersActivity"
-            android:configChanges="uiMode"
-            android:exported="false"
-            android:label="@string/providers" />
         <activity
             android:name=".LogsActivity"
             android:configChanges="uiMode"
