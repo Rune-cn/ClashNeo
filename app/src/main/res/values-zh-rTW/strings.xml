@@ -1,0 +1,138 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Traditional Chinese (Taiwan) translations for the Compose (Miuix) UI. -->
+<resources>
+
+    <string name="tab_control">控制</string>
+    <string name="tab_proxy">代理</string>
+    <string name="tab_profiles">設定檔</string>
+    <string name="tab_settings">設定</string>
+
+    <string name="status_running">執行中</string>
+    <string name="status_stopped">已停止</string>
+    <string name="status_starting">啟動中</string>
+    <string name="status_stopping">停止中</string>
+    <string name="status_cooldown">等待確認…</string>
+    <string name="status_traffic_upload">↑ %s</string>
+    <string name="status_traffic_download">↓ %s</string>
+    <string name="status_no_profile">未選擇設定檔</string>
+
+    <string name="action_start">啟動</string>
+    <string name="action_stop">停止</string>
+    <string name="action_starting">正在啟動…</string>
+    <string name="action_stopping">正在停止…</string>
+    <string name="action_confirming">正在確認…</string>
+
+    <string name="control_section_status">狀態</string>
+    <string name="control_section_actions">快速操作</string>
+    <string name="control_label_mode">模式</string>
+    <string name="control_label_profile">設定檔</string>
+    <string name="control_label_upload">上傳</string>
+    <string name="control_label_download">下載</string>
+    <string name="control_label_total">總計</string>
+    <string name="control_summary_mode_disabled">啟動後可用</string>
+    <string name="control_summary_traffic_unavailable">目前核心不提供流量統計</string>
+    <string name="control_action_refresh">重新整理狀態</string>
+    <string name="control_action_refresh_summary">重新從核心讀取通道狀態</string>
+    <string name="control_action_logs">日誌</string>
+    <string name="control_action_logs_summary">開啟即時或歷史日誌</string>
+    <string name="control_action_network">網路設定</string>
+    <string name="control_action_network_summary">TUN、DNS 與路由</string>
+    <string name="control_action_proxies">代理群組</string>
+    <string name="control_action_proxies_summary">切換選擇器群組的節點</string>
+
+    <string name="mode_script">腳本模式</string>
+
+    <string name="proxy_empty_title">沒有可顯示的代理群組</string>
+    <string name="proxy_empty_body">請先啟動通道，之後核心回報的代理群組會顯示在這裡。</string>
+    <string name="proxy_loading_title">正在載入代理群組…</string>
+    <string name="proxy_loading_body">正在等待核心回報代理群組。</string>
+    <string name="proxy_error_title">代理無法使用</string>
+    <string name="proxy_group_failed">此代理群組載入失敗</string>
+    <string name="proxy_group_empty">此代理群組沒有節點</string>
+    <string name="proxy_read_only">唯讀代理群組</string>
+    <string name="proxy_node_count">%d 個節點</string>
+
+    <string name="profiles_empty_title">沒有設定檔</string>
+    <string name="profiles_empty_body">請先建立或匯入一個設定檔。</string>
+    <string name="profiles_loading_title">正在載入設定檔…</string>
+    <string name="profiles_loading_body">正在從服務讀取設定檔清單。</string>
+    <string name="profiles_error_title">設定檔無法使用</string>
+    <string name="profiles_active">已啟用</string>
+    <string name="profiles_tap_to_activate">點擊啟用</string>
+    <string name="profiles_needs_import">尚未匯入，點擊編輯</string>
+    <string name="profiles_switching">切換中…</string>
+    <string name="profiles_pending">待更新</string>
+    <string name="profiles_updated_minutes">%d 分鐘前</string>
+    <string name="profiles_updated_hours">%d 小時前</string>
+    <string name="profiles_updated_days">%d 天前</string>
+    <string name="profiles_updated_months">%d 個月前</string>
+    <string name="profiles_updated_years">%d 年前</string>
+    <string name="profiles_updated_recently">剛剛更新</string>
+    <string name="profiles_never_updated">從未更新</string>
+    <string name="profiles_action_create">新增設定檔</string>
+    <string name="profiles_action_create_summary">從檔案、連結或 QR Code 建立設定檔</string>
+    <string name="profiles_action_update_all">全部更新</string>
+    <string name="profiles_action_update_all_summary">更新所有可匯入的設定檔</string>
+
+    <string name="settings_section_app">應用程式</string>
+    <string name="settings_section_network">網路</string>
+    <string name="settings_section_kernel">核心</string>
+    <string name="settings_section_tools">工具</string>
+    <string name="settings_section_about">關於</string>
+
+    <string name="settings_app">應用程式設定</string>
+    <string name="settings_app_summary">主題、圖示顯示與更新</string>
+    <string name="settings_network">網路設定</string>
+    <string name="settings_network_summary">TUN、DNS 與路由</string>
+    <string name="settings_override">覆寫</string>
+    <string name="settings_override_summary">連接埠、介面與協定堆疊</string>
+    <string name="settings_access_control">存取控制</string>
+    <string name="settings_access_control_summary">依應用程式設定代理規則</string>
+    <string name="settings_meta_features">Meta 功能</string>
+    <string name="settings_meta_features_summary">嗅探、地理資料與統一延遲</string>
+    <string name="settings_override_locked">請先停止通道再修改</string>
+
+    <string name="settings_providers">提供者</string>
+    <string name="settings_providers_summary">規則與代理提供者</string>
+    <string name="settings_files">檔案</string>
+    <string name="settings_files_summary">瀏覽設定與提供者檔案</string>
+    <string name="settings_logs">日誌</string>
+    <string name="settings_logs_summary">即時日誌與歷史記錄</string>
+    <string name="settings_help">說明</string>
+    <string name="settings_help_summary">使用說明與疑難排解</string>
+
+    <string name="settings_about">關於 ClashNeo</string>
+    <string name="settings_about_summary">版本、原始碼與致謝</string>
+    <string name="settings_licenses">授權條款</string>
+    <string name="settings_licenses_summary">GPL-3.0 與第三方聲明</string>
+
+    <string name="settings_value_vpn">VPN 模式</string>
+    <string name="settings_value_proxy_mode">代理模式</string>
+    <string name="settings_value_enabled">已啟用</string>
+    <string name="settings_value_disabled">已停用</string>
+    <string name="settings_value_follow_system">跟隨系統</string>
+
+    <string name="state_retry">重試</string>
+    <string name="state_unknown_error">未知錯誤</string>
+
+    <string name="message_select_profile_first">請先選擇設定檔</string>
+    <string name="message_start_failed">無法啟動通道</string>
+    <string name="message_stop_failed">無法停止通道</string>
+    <string name="message_switch_failed">切換設定檔失敗：%s</string>
+    <string name="message_switch_succeeded">已切換至 %s</string>
+    <string name="message_import_first">此設定檔尚未匯入</string>
+    <string name="message_proxy_not_selectable">此代理群組無法切換</string>
+    <string name="message_profile_updated">設定檔 %s 更新完成</string>
+    <string name="message_profile_update_failed">設定檔 %s 更新失敗：%s</string>
+
+    <string name="about_projects">專案</string>
+    <string name="about_credits">致謝</string>
+    <string name="about_license_section">授權</string>
+    <string name="about_source_code">原始碼</string>
+    <string name="about_upstream">本專案所基於的上游專案</string>
+    <string name="about_kernel">代理核心</string>
+    <string name="about_license_name">GNU 通用公共授權條款 v3.0</string>
+    <string name="about_license_summary">本應用程式為自由軟體，不提供任何擔保。</string>
+    <string name="about_version_format">%1$s (%2$d)</string>
+    <string name="about_kernel_unavailable">核心啟動後才能讀取核心版本</string>
+</resources>

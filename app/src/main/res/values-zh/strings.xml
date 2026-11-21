@@ -1,0 +1,150 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Simplified Chinese translations for the Compose (Miuix) UI. -->
+<resources>
+
+    <!-- Bottom navigation. -->
+    <string name="tab_control">控制</string>
+    <string name="tab_proxy">代理</string>
+    <string name="tab_profiles">配置</string>
+    <string name="tab_settings">设置</string>
+
+    <!-- Control tab: tunnel status card. -->
+    <string name="status_running">运行中</string>
+    <string name="status_stopped">已停止</string>
+    <string name="status_starting">启动中</string>
+    <string name="status_stopping">停止中</string>
+    <string name="status_cooldown">等待确认…</string>
+    <string name="status_traffic_upload">↑ %s</string>
+    <string name="status_traffic_download">↓ %s</string>
+    <string name="status_no_profile">没有选择配置文件</string>
+
+    <!-- Control tab: the start/stop control. -->
+    <string name="action_start">启动</string>
+    <string name="action_stop">停止</string>
+    <string name="action_starting">正在启动…</string>
+    <string name="action_stopping">正在停止…</string>
+    <string name="action_confirming">正在确认…</string>
+
+    <!-- Control tab: details section. -->
+    <string name="control_section_status">状态</string>
+    <string name="control_section_actions">快捷操作</string>
+    <string name="control_label_mode">模式</string>
+    <string name="control_label_profile">配置</string>
+    <string name="control_label_upload">上传</string>
+    <string name="control_label_download">下载</string>
+    <string name="control_label_total">总计</string>
+    <string name="control_summary_mode_disabled">启动后可用</string>
+    <string name="control_summary_traffic_unavailable">当前内核不提供流量统计</string>
+    <string name="control_action_refresh">刷新状态</string>
+    <string name="control_action_refresh_summary">重新从内核读取隧道状态</string>
+    <string name="control_action_logs">日志</string>
+    <string name="control_action_logs_summary">打开实时或历史日志</string>
+    <string name="control_action_network">网络设置</string>
+    <string name="control_action_network_summary">TUN、DNS 与路由</string>
+    <string name="control_action_proxies">代理组</string>
+    <string name="control_action_proxies_summary">切换选择器组的节点</string>
+
+    <!-- Mode names. -->
+    <string name="mode_script">脚本模式</string>
+
+    <!-- Proxy tab. -->
+    <string name="proxy_empty_title">没有可显示的代理组</string>
+    <string name="proxy_empty_body">请先启动隧道，之后内核上报的代理组会显示在这里。</string>
+    <string name="proxy_loading_title">正在加载代理组…</string>
+    <string name="proxy_loading_body">正在等待内核返回代理组。</string>
+    <string name="proxy_error_title">代理不可用</string>
+    <string name="proxy_group_failed">该代理组加载失败</string>
+    <string name="proxy_group_empty">该代理组没有节点</string>
+    <string name="proxy_read_only">只读代理组</string>
+    <string name="proxy_node_count">%d 个节点</string>
+
+    <!-- Profiles tab. -->
+    <string name="profiles_empty_title">没有配置</string>
+    <string name="profiles_empty_body">请先创建或导入一个配置。</string>
+    <string name="profiles_loading_title">正在加载配置…</string>
+    <string name="profiles_loading_body">正在从服务读取配置列表。</string>
+    <string name="profiles_error_title">配置不可用</string>
+    <string name="profiles_active">已激活</string>
+    <string name="profiles_tap_to_activate">点击激活</string>
+    <string name="profiles_needs_import">尚未导入，点击编辑</string>
+    <string name="profiles_switching">切换中…</string>
+    <string name="profiles_pending">待更新</string>
+    <string name="profiles_updated_minutes">%d 分钟前</string>
+    <string name="profiles_updated_hours">%d 小时前</string>
+    <string name="profiles_updated_days">%d 天前</string>
+    <string name="profiles_updated_months">%d 个月前</string>
+    <string name="profiles_updated_years">%d 年前</string>
+    <string name="profiles_updated_recently">刚刚更新</string>
+    <string name="profiles_never_updated">从未更新</string>
+    <string name="profiles_action_create">新建配置</string>
+    <string name="profiles_action_create_summary">从文件、链接或二维码创建配置</string>
+    <string name="profiles_action_update_all">全部更新</string>
+    <string name="profiles_action_update_all_summary">更新所有可导入的配置</string>
+
+    <!-- Settings tab: sections. -->
+    <string name="settings_section_app">应用</string>
+    <string name="settings_section_network">网络</string>
+    <string name="settings_section_kernel">内核</string>
+    <string name="settings_section_tools">工具</string>
+    <string name="settings_section_about">关于</string>
+
+    <string name="settings_app">应用设置</string>
+    <string name="settings_app_summary">主题、图标显示与更新</string>
+    <string name="settings_network">网络设置</string>
+    <string name="settings_network_summary">TUN、DNS 与路由</string>
+    <string name="settings_override">覆写</string>
+    <string name="settings_override_summary">端口、接口与协议栈</string>
+    <string name="settings_access_control">访问控制</string>
+    <string name="settings_access_control_summary">按应用设置代理规则</string>
+    <string name="settings_meta_features">Meta 特性</string>
+    <string name="settings_meta_features_summary">嗅探、地理数据与统一延迟</string>
+    <string name="settings_override_locked">请先停止隧道再修改</string>
+
+    <string name="settings_providers">提供者</string>
+    <string name="settings_providers_summary">规则与代理提供者</string>
+    <string name="settings_files">文件</string>
+    <string name="settings_files_summary">浏览配置与提供者文件</string>
+    <string name="settings_logs">日志</string>
+    <string name="settings_logs_summary">实时日志与历史记录</string>
+    <string name="settings_help">帮助</string>
+    <string name="settings_help_summary">使用说明与疑难解答</string>
+
+    <string name="settings_about">关于 ClashNeo</string>
+    <string name="settings_about_summary">版本、源码与致谢</string>
+    <string name="settings_licenses">开源许可</string>
+    <string name="settings_licenses_summary">GPL-3.0 与第三方声明</string>
+
+    <!-- Settings tab: live values. -->
+    <string name="settings_value_vpn">VPN 模式</string>
+    <string name="settings_value_proxy_mode">代理模式</string>
+    <string name="settings_value_enabled">已启用</string>
+    <string name="settings_value_disabled">已禁用</string>
+    <string name="settings_value_follow_system">跟随系统</string>
+
+    <!-- Shared empty/error state. -->
+    <string name="state_retry">重试</string>
+    <string name="state_unknown_error">未知错误</string>
+
+    <!-- Snackbar notices. -->
+    <string name="message_select_profile_first">请先选择配置文件</string>
+    <string name="message_start_failed">无法启动隧道</string>
+    <string name="message_stop_failed">无法停止隧道</string>
+    <string name="message_switch_failed">切换配置失败：%s</string>
+    <string name="message_switch_succeeded">已切换到 %s</string>
+    <string name="message_import_first">该配置尚未导入</string>
+    <string name="message_proxy_not_selectable">该代理组无法切换</string>
+    <string name="message_profile_updated">配置 %s 更新完成</string>
+    <string name="message_profile_update_failed">配置 %s 更新失败：%s</string>
+
+    <!-- About screen. -->
+    <string name="about_projects">项目</string>
+    <string name="about_credits">致谢</string>
+    <string name="about_license_section">许可证</string>
+    <string name="about_source_code">源代码</string>
+    <string name="about_upstream">本项目基于的上游项目</string>
+    <string name="about_kernel">代理内核</string>
+    <string name="about_license_name">GNU 通用公共许可证 v3.0</string>
+    <string name="about_license_summary">本应用为自由软件，不提供任何担保。</string>
+    <string name="about_version_format">%1$s (%2$d)</string>
+    <string name="about_kernel_unavailable">内核启动后才能读取内核版本</string>
+</resources>

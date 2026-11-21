@@ -47,7 +47,9 @@ object AppTheme {
  * Root theme for the Compose surface.
  *
  * [useOs4] is honoured only when the platform can render glass effects, so an unsupported device
- * degrades to the classic OS3 presentation instead of drawing nothing.
+ * degrades to the classic OS3 presentation instead of drawing nothing. [darkTheme] is supplied by
+ * the caller rather than defaulted here because the app's dark-mode preference is an enum
+ * (`DarkMode.Auto` / `ForceLight` / `ForceDark`), not a boolean.
  */
 @Composable
 fun ClashNeoTheme(
@@ -61,7 +63,8 @@ fun ClashNeoTheme(
         LocalIsDark provides darkTheme,
         LocalUseMiuixOs4 provides os4,
     ) {
-        // `MiuixTheme(colors)` takes the palette positionally; there is no `colorScheme` parameter.
+        // `MiuixTheme(colors)` takes the palette positionally; there is no `colorScheme` parameter,
+        // and a named `colors =` argument does not resolve against the current overloads.
         MiuixTheme(
             colors = if (darkTheme) darkColorScheme() else lightColorScheme(),
         ) {
@@ -71,20 +74,25 @@ fun ClashNeoTheme(
 }
 
 /**
- * Status-card colours for the home page.
+ * Status palette for the control screen.
  *
- * Kept as plain functions rather than theme tokens because they intentionally bypass the dynamic
- * colour scheme: the green/red pair has to stay recognisable as "healthy" / "abnormal" even when
- * the user's wallpaper-derived palette is orange.
+ * Kept as plain colours rather than theme tokens because they intentionally bypass the dynamic
+ * colour scheme: "running" (green), "starting" (amber) and "stopped" (red) have to stay
+ * recognisable as tunnel states even when the user's wallpaper-derived palette is orange.
  */
-internal object StatusCardColors {
-    val runningLight = Color(0xFFDFFAE4)
-    val runningDark = Color(0xFF1A3825)
-    val abnormalLight = Color(0xFFFAEEEE)
-    val abnormalDark = Color(0xFF381A1A)
-
+internal object StatusColors {
+    val runningContainerLight = Color(0xFFDDF7E3)
+    val runningContainerDark = Color(0xFF16301F)
     val runningAccentLight = Color(0xFF2E7D32)
     val runningAccentDark = Color(0xFF7BD88F)
-    val abnormalAccentLight = Color(0xFFC62828)
-    val abnormalAccentDark = Color(0xFFF08A8A)
+
+    val stoppedContainerLight = Color(0xFFFAEDED)
+    val stoppedContainerDark = Color(0xFF351A1A)
+    val stoppedAccentLight = Color(0xFFC62828)
+    val stoppedAccentDark = Color(0xFFF08A8A)
+
+    val busyContainerLight = Color(0xFFFDF3DC)
+    val busyContainerDark = Color(0xFF35290F)
+    val busyAccentLight = Color(0xFFB26A00)
+    val busyAccentDark = Color(0xFFFFC46B)
 }

@@ -68,29 +68,37 @@
                 <action android:name="android.service.quicksettings.action.QS_TILE_PREFERENCES" />
             </intent-filter>
         </activity>
+        <!--
+            Legacy XML launcher alias. It no longer advertises MAIN/LAUNCHER: the Compose UI
+            below is the single launcher entry point. The alias is kept (disabled for launching,
+            still exported) so existing `MainActivityAlias` references and Quick Settings
+            preferences keep resolving instead of throwing ActivityNotFoundException.
+        -->
         <activity-alias
             android:name=".MainActivityAlias"
+            android:enabled="false"
             android:exported="true"
-            android:targetActivity=".MainActivity">
+            android:targetActivity=".MainActivity" />
+
+        <!--
+            The Miuix Compose UI. This is the app's launcher entry point: Control / Proxy /
+            Profiles / Settings. The XML activities remain reachable from inside these screens,
+            but the launcher no longer routes to them.
+        -->
+        <activity
+            android:name=".ui.ClashNeoComposeActivity"
+            android:configChanges="uiMode"
+            android:exported="true"
+            android:label="@string/application_name"
+            android:launchMode="singleTask"
+            android:theme="@style/BootstrapTheme">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
                 <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
-        </activity-alias>
-
-        <!--
-            Compose UI host (home / settings / about). Registered as a normal, non-exported
-            activity so the XML UI stays the sole launcher entry point until the migration is
-            complete; it can be started explicitly or via an adb intent filter check.
-        -->
-        <activity
-            android:name=".ui.ClashNeoComposeActivity"
-            android:configChanges="uiMode"
-            android:exported="false"
-            android:label="@string/application_name"
-            android:theme="@style/BootstrapTheme" />
+        </activity>
 
         <activity
             android:name=".ExternalControlActivity"

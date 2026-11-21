@@ -1,0 +1,157 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Strings owned by the Compose (Miuix) UI.
+
+    Every label the Compose surface renders lives here rather than in Kotlin, so the screen can be
+    translated with the same tooling as the XML UI and so the four tab labels of the main screen
+    exist in one place. Translations for the locales advertised in `xml/locales_config.xml` live in
+    the matching `values-*` folders; a missing translation falls back to English.
+-->
+<resources>
+
+    <!-- Bottom navigation: the four top-level destinations. -->
+    <string name="tab_control">Control</string>
+    <string name="tab_proxy">Proxy</string>
+    <string name="tab_profiles">Profiles</string>
+    <string name="tab_settings">Settings</string>
+
+    <!-- Control tab: tunnel status card. -->
+    <string name="status_running">Running</string>
+    <string name="status_stopped">Stopped</string>
+    <string name="status_starting">Starting</string>
+    <string name="status_stopping">Stopping</string>
+    <string name="status_cooldown">Confirming…</string>
+    <string name="status_traffic_upload">↑ %s</string>
+    <string name="status_traffic_download">↓ %s</string>
+    <string name="status_no_profile">No profile selected</string>
+
+    <!-- Control tab: the start/stop control. -->
+    <string name="action_start">Start</string>
+    <string name="action_stop">Stop</string>
+    <string name="action_starting">Starting…</string>
+    <string name="action_stopping">Stopping…</string>
+    <string name="action_confirming">Confirming…</string>
+
+    <!-- Control tab: details section. -->
+    <string name="control_section_status">Status</string>
+    <string name="control_section_actions">Quick actions</string>
+    <string name="control_label_mode">Mode</string>
+    <string name="control_label_profile">Profile</string>
+    <string name="control_label_upload">Upload</string>
+    <string name="control_label_download">Download</string>
+    <string name="control_label_total">Total</string>
+    <string name="control_summary_mode_disabled">Available after the tunnel starts</string>
+    <string name="control_summary_traffic_unavailable">Traffic counters unavailable for this core</string>
+    <string name="control_action_refresh">Refresh status</string>
+    <string name="control_action_refresh_summary">Re-read the tunnel state from the core</string>
+    <string name="control_action_logs">Logs</string>
+    <string name="control_action_logs_summary">Open the live or historical logs</string>
+    <string name="control_action_network">Network settings</string>
+    <string name="control_action_network_summary">TUN, DNS and routing</string>
+    <string name="control_action_proxies">Proxy groups</string>
+    <string name="control_action_proxies_summary">Switch the node of a selector group</string>
+
+    <!-- Mode names, mirroring design/values/strings.xml mode strings. -->
+    <string name="mode_script">Script</string>
+
+    <!-- Proxy tab. -->
+    <string name="proxy_empty_title">No proxy groups</string>
+    <string name="proxy_empty_body">Start the tunnel first, then the groups reported by the core will appear here.</string>
+    <string name="proxy_loading_title">Loading proxy groups…</string>
+    <string name="proxy_loading_body">Waiting for the core to report its groups.</string>
+    <string name="proxy_error_title">Proxies unavailable</string>
+    <string name="proxy_group_failed">Failed to load this group</string>
+    <string name="proxy_group_empty">This group has no nodes</string>
+    <string name="proxy_read_only">Read-only group</string>
+    <string name="proxy_node_count">%d nodes</string>
+
+    <!-- Profiles tab. -->
+    <string name="profiles_empty_title">No profiles</string>
+    <string name="profiles_empty_body">Create or import a profile to get started.</string>
+    <string name="profiles_loading_title">Loading profiles…</string>
+    <string name="profiles_loading_body">Reading the profile list from the service.</string>
+    <string name="profiles_error_title">Profiles unavailable</string>
+    <string name="profiles_active">Active</string>
+    <string name="profiles_tap_to_activate">Tap to activate</string>
+    <string name="profiles_needs_import">Not imported yet — tap to edit</string>
+    <string name="profiles_switching">Switching…</string>
+    <string name="profiles_pending">Pending</string>
+    <string name="profiles_updated_minutes">%d min ago</string>
+    <string name="profiles_updated_hours">%d hours ago</string>
+    <string name="profiles_updated_days">%d days ago</string>
+    <string name="profiles_updated_months">%d months ago</string>
+    <string name="profiles_updated_years">%d years ago</string>
+    <string name="profiles_updated_recently">Updated just now</string>
+    <string name="profiles_never_updated">Never updated</string>
+    <string name="profiles_action_create">New profile</string>
+    <string name="profiles_action_create_summary">Create a profile from a file, a URL or a QR code</string>
+    <string name="profiles_action_update_all">Update all</string>
+    <string name="profiles_action_update_all_summary">Refresh every importable profile</string>
+
+    <!-- Settings tab: sections. -->
+    <string name="settings_section_app">App</string>
+    <string name="settings_section_network">Network</string>
+    <string name="settings_section_kernel">Kernel</string>
+    <string name="settings_section_tools">Tools</string>
+    <string name="settings_section_about">About</string>
+
+    <string name="settings_app">App settings</string>
+    <string name="settings_app_summary">Theme, icon visibility and updates</string>
+    <string name="settings_network">Network settings</string>
+    <string name="settings_network_summary">TUN, DNS and routing</string>
+    <string name="settings_override">Override</string>
+    <string name="settings_override_summary">Port, interface and stack</string>
+    <string name="settings_access_control">Access control</string>
+    <string name="settings_access_control_summary">Per-app proxy rules</string>
+    <string name="settings_meta_features">Meta features</string>
+    <string name="settings_meta_features_summary">Sniffer, geodata and unified delay</string>
+    <string name="settings_override_locked">Stop the tunnel to edit</string>
+
+    <string name="settings_providers">Providers</string>
+    <string name="settings_providers_summary">Rule and proxy providers</string>
+    <string name="settings_files">Files</string>
+    <string name="settings_files_summary">Browse configuration and provider files</string>
+    <string name="settings_logs">Logs</string>
+    <string name="settings_logs_summary">Live logcat and history</string>
+    <string name="settings_help">Help</string>
+    <string name="settings_help_summary">Usage notes and troubleshooting</string>
+
+    <string name="settings_about">About ClashNeo</string>
+    <string name="settings_about_summary">Version, sources and credits</string>
+    <string name="settings_licenses">Licenses</string>
+    <string name="settings_licenses_summary">GPL-3.0 and third-party notices</string>
+
+    <!-- Settings tab: live values shown on the rows above. -->
+    <string name="settings_value_vpn">VPN mode</string>
+    <string name="settings_value_proxy_mode">Proxy mode</string>
+    <string name="settings_value_enabled">Enabled</string>
+    <string name="settings_value_disabled">Disabled</string>
+    <string name="settings_value_follow_system">Follow system</string>
+
+    <!-- Shared empty/error state. -->
+    <string name="state_retry">Retry</string>
+    <string name="state_unknown_error">Unknown error</string>
+
+    <!-- Snackbar notices. -->
+    <string name="message_select_profile_first">Select a profile first</string>
+    <string name="message_start_failed">Unable to start the tunnel</string>
+    <string name="message_stop_failed">Unable to stop the tunnel</string>
+    <string name="message_switch_failed">Unable to switch the profile: %s</string>
+    <string name="message_switch_succeeded">Switched to %s</string>
+    <string name="message_import_first">This profile has not been imported yet</string>
+    <string name="message_proxy_not_selectable">This group cannot be changed</string>
+    <string name="message_profile_updated">Update of %s completed</string>
+    <string name="message_profile_update_failed">Update of %s failed: %s</string>
+
+    <!-- About screen. -->
+    <string name="about_projects">Projects</string>
+    <string name="about_credits">Credits</string>
+    <string name="about_license_section">License</string>
+    <string name="about_source_code">Source code</string>
+    <string name="about_upstream">Upstream project this is based on</string>
+    <string name="about_kernel">Proxy kernel</string>
+    <string name="about_license_name">GNU General Public License v3.0</string>
+    <string name="about_license_summary">This app is free software and comes with ABSOLUTELY NO WARRANTY.</string>
+    <string name="about_version_format">%1$s (%2$d)</string>
+    <string name="about_kernel_unavailable">Kernel version unavailable until the core starts</string>
+</resources>
