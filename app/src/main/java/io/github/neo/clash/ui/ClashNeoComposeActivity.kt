@@ -8,6 +8,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.Spring
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
@@ -51,6 +52,9 @@ import io.github.neo.clash.ui.page.proxy.ProxyPage
 import io.github.neo.clash.ui.page.settings.SettingsPage
 import io.github.neo.clash.ui.page.settings.SettingsRoute
 import io.github.neo.clash.ui.page.settings.SettingsUiState
+import io.github.neo.clash.ui.page.theme.ThemeSettingsPage
+import io.github.neo.clash.ui.page.theme.ThemeMode
+import io.github.neo.clash.ui.page.theme.ThemeUiState
 import io.github.neo.clash.ui.theme.ClashNeoTheme
 import io.github.neo.clash.ui.widget.MiuixComponentHost
 import kotlinx.coroutines.flow.collectLatest
@@ -108,9 +112,18 @@ class ClashNeoComposeActivity : ComponentActivity() {
         controller.refreshAll()
 
         setContent {
-            ClashNeoTheme {
+            // Hoisted above ClashNeoTheme: the theme has to be able to read the settings that it
+            // is about to apply, so the state cannot live inside the themed subtree.
+            var themeState by remember { mutableStateOf(ThemeUiState()) }
+
+            ClashNeoTheme(
+                useOs4 = themeState.useMiuixOs4,
+                darkTheme = themeState.themeMode.resolveDark(),
+            ) {
                 ClashNeoApp(
                     controller = controller,
+                    themeState = themeState,
+                    onThemeStateChange = { themeState = it },
                     onOpenLogs = { openLogs() },
                 )
             }
@@ -143,6 +156,13 @@ class ClashNeoComposeActivity : ComponentActivity() {
  * forces a branch in the `when` below instead of silently rendering nothing. The label is a
  * resource id, not a literal, so the tab bar follows the device language.
  */
+/** Sub-pages layered above the tab pager. */
+private enum class SubPage {
+    None,
+    About,
+    Theme,
+}
+
 private enum class Tab(val labelRes: Int, val icon: ImageVector) {
     Control(R.string.tab_control, Icons.Rounded.Dashboard),
     Proxy(R.string.tab_proxy, Icons.Rounded.Dns),
@@ -161,11 +181,15 @@ private enum class Tab(val labelRes: Int, val icon: ImageVector) {
 @Composable
 private fun ClashNeoApp(
     controller: ClashUiController,
+    themeState: ThemeUiState,
+    onThemeStateChange: (ThemeUiState) -> Unit,
     onOpenLogs: () -> Unit,
 ) {
     val pagerState = rememberPagerState(pageCount = { Tab.entries.size })
     val scope = rememberCoroutineScope()
-    var showAbout by remember { mutableStateOf(false) }
+    // Sub-pages that live above the tabs. An enum (not a boolean per page) keeps the back/return
+    // behaviour identical for every one of them.
+    var subPage by remember { mutableStateOf(SubPage.None) }
 
     val snackbarHostState = remember { SnackbarHostState() }
 
@@ -207,7 +231,7 @@ private fun ClashNeoApp(
                 MiuixBottomBar(
                     selected = pagerState.currentPage,
                     onSelect = { index ->
-                        showAbout = false
+                        subPage = SubPage.None
                         scope.launch { pagerState.animateScrollToPage(index) }
                     },
                 )
@@ -215,17 +239,33 @@ private fun ClashNeoApp(
             snackbarHost = { SnackbarHost(snackbarHostState) },
             containerColor = androidx.compose.ui.graphics.Color.Transparent,
         ) { padding ->
-            if (showAbout) {
-                AboutPage(
-                    state = AboutUiState(
-                        appName = stringResource(R.string.app_display_name),
-                        versionName = BuildConfig.VERSION_NAME,
-                        versionCode = BuildConfig.VERSION_CODE,
-                    ),
-                    modifier = Modifier.fillMaxSize(),
-                    onBack = { showAbout = false },
-                )
-                return@Scaffold
+            when (subPage) {
+                SubPage.About -> {
+                    AboutPage(
+                        state = AboutUiState(
+                            appName = stringResource(R.string.app_display_name),
+                            versionName = BuildConfig.VERSION_NAME,
+                            versionCode = BuildConfig.VERSION_CODE,
+                        ),
+                        modifier = Modifier.fillMaxSize(),
+                        outerPadding = PaddingValues(bottom = padding.calculateBottomPadding()),
+                        onBack = { subPage = SubPage.None },
+                    )
+                    return@Scaffold
+                }
+
+                SubPage.Theme -> {
+                    ThemeSettingsPage(
+                        state = themeState,
+                        onStateChange = onThemeStateChange,
+                        modifier = Modifier.fillMaxSize(),
+                        outerPadding = PaddingValues(bottom = padding.calculateBottomPadding()),
+                        onBack = { subPage = SubPage.None },
+                    )
+                    return@Scaffold
+                }
+
+                SubPage.None -> Unit
             }
 
             HorizontalPager(
@@ -297,7 +337,8 @@ private fun ClashNeoApp(
                             outerPadding = pageOuterPadding,
                             onNavigate = { route ->
                                 when (route) {
-                                    SettingsRoute.About -> showAbout = true
+                                    SettingsRoute.About -> subPage = SubPage.About
+                                    SettingsRoute.Theme -> subPage = SubPage.Theme
                                     SettingsRoute.Network ->
                                         context.startActivity(NetworkSettingsActivity::class.intent)
                                     else ->
@@ -310,6 +351,19 @@ private fun ClashNeoApp(
             }
         }
     }
+}
+
+/**
+ * Resolve a [ThemeMode] to the boolean the theme composable wants.
+ *
+ * Kept here rather than inside the theme so the enum stays a pure value object that can be
+ * persisted without dragging Compose into it.
+ */
+@Composable
+private fun ThemeMode.resolveDark(): Boolean = when (this) {
+    ThemeMode.LIGHT -> false
+    ThemeMode.DARK -> true
+    ThemeMode.SYSTEM -> isSystemInDarkTheme()
 }
 
 /** Bottom navigation bar shared by every tab. */

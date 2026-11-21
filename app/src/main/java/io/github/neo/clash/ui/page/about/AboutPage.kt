@@ -7,6 +7,7 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -60,6 +61,7 @@ data class AboutUiState(
 fun AboutPage(
     state: AboutUiState,
     modifier: Modifier = Modifier,
+    outerPadding: PaddingValues = PaddingValues(),
     onBack: () -> Unit = {},
 ) {
     val uriHandler = LocalUriHandler.current
@@ -79,6 +81,7 @@ fun AboutPage(
     MiuixPageScaffold(
         title = stringResource(R.string.settings_about),
         modifier = modifier,
+        outerPadding = outerPadding,
         navigationIcon = { MiuixBackButton(onClick = onBack) },
         horizontalPadding = 12.dp,
         verticalPadding = 12.dp,
