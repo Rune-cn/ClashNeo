@@ -263,4 +263,8 @@
     <string name="override_destination">Override Destination</string>
     <string name="import_from_qr_no_permission">相機權限受限，請前往設定開啟。</string>
     <string name="import_from_qr_exception">發生系統未知異常，操作失敗。</string>
+    <string name="browse">瀏覽檔案</string>
+    <string name="profile_file">為這個設定檔使用本機檔案</string>
+    <string name="action">操作</string>
+    <string name="commit_changes">儲存對此設定檔的修改</string>
 </resources>

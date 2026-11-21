@@ -282,4 +282,8 @@
     <string name="shortcut_start_long">启动 Clash 服务</string>
     <string name="shortcut_stop_short">停止 Clash</string>
     <string name="shortcut_stop_long">停止 Clash 服务</string>
+    <string name="browse">浏览文件</string>
+    <string name="profile_file">为这个配置使用本地文件</string>
+    <string name="action">操作</string>
+    <string name="commit_changes">保存对此配置的修改</string>
 </resources>

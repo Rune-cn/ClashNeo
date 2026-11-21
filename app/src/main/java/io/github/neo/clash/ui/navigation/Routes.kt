@@ -35,4 +35,8 @@ sealed interface Route : NavKey {
 
     @Serializable
     data object AppSettings : Route
+
+    /** @param uuid identifies which profile is being edited. */
+    @Serializable
+    data class Properties(val uuid: String) : Route
 }
