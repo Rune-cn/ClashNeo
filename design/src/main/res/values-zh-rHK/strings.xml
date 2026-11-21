@@ -276,4 +276,9 @@
     <string name="empty_directory">此目錄為空</string>
     <string name="directory">目錄</string>
     <string name="from_other_apps">從其他應用程式</string>
+    <string name="section_connection">連線</string>
+    <string name="section_sniffing">嗅探</string>
+    <string name="section_geodata">GEO 資料</string>
+    <string name="section_matching">比對</string>
+    <string name="import_file_summary">從儲存空間選擇檔案</string>
 </resources>

@@ -388,4 +388,9 @@
     <string name="empty_directory">This directory is empty</string>
     <string name="directory">Directory</string>
     <string name="from_other_apps">From other apps</string>
+    <string name="section_connection">Connection</string>
+    <string name="section_sniffing">Sniffing</string>
+    <string name="section_geodata">GEO data</string>
+    <string name="section_matching">Matching</string>
+    <string name="import_file_summary">Pick a file from storage</string>
 </resources>

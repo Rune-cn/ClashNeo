@@ -295,4 +295,9 @@
     <string name="empty_directory">此目录为空</string>
     <string name="directory">目录</string>
     <string name="from_other_apps">从其他应用</string>
+    <string name="section_connection">连接</string>
+    <string name="section_sniffing">嗅探</string>
+    <string name="section_geodata">GEO 数据</string>
+    <string name="section_matching">匹配</string>
+    <string name="import_file_summary">从存储中选择文件</string>
 </resources>

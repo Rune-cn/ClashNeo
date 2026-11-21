@@ -73,6 +73,8 @@ import io.github.neo.clash.ui.page.files.FileEntryUi
 import io.github.neo.clash.ui.page.files.FilesPage
 import io.github.neo.clash.ui.page.files.FilesUiState
 import io.github.neo.clash.ui.page.logs.LogsPage
+import io.github.neo.clash.ui.page.metafeatures.MetaFeatureSettingsPage
+import io.github.neo.clash.ui.page.metafeatures.MetaFeatureUiState
 import io.github.neo.clash.ui.page.logs.LogsUiState
 import io.github.neo.clash.ui.page.newprofile.NewProfilePage
 import io.github.neo.clash.ui.page.newprofile.NewProfileUiState
@@ -195,6 +197,7 @@ class ClashNeoComposeActivity : ComponentActivity() {
             var logsState by remember { mutableStateOf(LogsUiState()) }
             var providersState by remember { mutableStateOf(ProvidersUiState()) }
             var filesState by remember { mutableStateOf(FilesUiState()) }
+            var metaState by remember { mutableStateOf(MetaFeatureUiState()) }
 
             ClashNeoTheme(
                 themeMode = themeState.themeMode,
@@ -222,6 +225,8 @@ class ClashNeoComposeActivity : ComponentActivity() {
                     logsState = logsState,
                     providersState = providersState,
                     filesState = filesState,
+                    metaState = metaState,
+                    onMetaStateChange = { metaState = it },
                     onRequireRecreate = { recreate() },
                     onHideIconChange = { hidden -> setLauncherIconVisible(!hidden) },
                     onThemeStateChange = { themeState = it },
@@ -310,6 +315,8 @@ private fun ClashNeoApp(
     logsState: LogsUiState,
     providersState: ProvidersUiState,
     filesState: FilesUiState,
+    metaState: MetaFeatureUiState,
+    onMetaStateChange: (MetaFeatureUiState) -> Unit,
     onRequireRecreate: () -> Unit,
     onHideIconChange: (Boolean) -> Unit,
     onOpenLogs: () -> Unit,
@@ -493,6 +500,11 @@ private fun ClashNeoApp(
                                             SettingsRoute.AccessControl -> navigateTo(Route.AccessControl)
                                             SettingsRoute.Override -> navigateTo(Route.Override)
                                             SettingsRoute.AppSettings -> navigateTo(Route.AppSettings)
+                                            SettingsRoute.MetaFeatures ->
+                                                navigateTo(Route.MetaFeatures)
+                                            // Licenses still opens the XML settings hub: the
+                                            // licence list comes from generated third-party
+                                            // metadata that has no Compose screen yet.
                                             else -> context.startActivity(
                                                 SettingsActivity::class.intent,
                                             )
@@ -590,6 +602,18 @@ private fun ClashNeoApp(
                 entry<Route.Files>(swipeDismiss = swipeDirection) {
                     FilesPage(
                         state = filesState,
+                        modifier = Modifier.fillMaxSize(),
+                        onBack = popBack,
+                    )
+                }
+
+                entry<Route.MetaFeatures>(swipeDismiss = swipeDirection) {
+                    MetaFeatureSettingsPage(
+                        state = metaState,
+                        onStateChange = onMetaStateChange,
+                        // Core vocabularies, passed in rather than duplicated here.
+                        findProcessModes = listOf("off", "strict", "always"),
+                        geodataModeLabels = listOf("memconservative", "mmap"),
                         modifier = Modifier.fillMaxSize(),
                         onBack = popBack,
                     )
