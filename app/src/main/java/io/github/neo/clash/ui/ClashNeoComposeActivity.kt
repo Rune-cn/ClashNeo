@@ -112,6 +112,7 @@ import io.github.neo.clash.ui.page.logcat.LogcatLineUi
 import io.github.neo.clash.ui.page.logcat.LogcatPage
 import io.github.neo.clash.ui.page.logcat.LogcatUiState
 import io.github.neo.clash.service.model.Profile
+import io.github.neo.clash.ui.store.MetaFeatureStore
 import io.github.neo.clash.ui.store.ThemeStore
 import io.github.neo.clash.ui.theme.ClashNeoTheme
 import io.github.neo.clash.ui.theme.getMiuixAppBarColor
@@ -222,9 +223,8 @@ class ClashNeoComposeActivity : ComponentActivity() {
             var appSettingsState by remember { mutableStateOf(loadAppSettingsState()) }
             var propertiesState by remember { mutableStateOf(PropertiesUiState()) }
 
-            var providersState by remember { mutableStateOf(ProvidersUiState()) }
 
-            var metaState by remember { mutableStateOf(MetaFeatureUiState()) }
+            var metaState by remember { mutableStateOf(loadMetaState()) }
 
             ClashNeoTheme(
                 themeMode = themeState.themeMode,
@@ -251,11 +251,12 @@ class ClashNeoComposeActivity : ComponentActivity() {
                     },
                     propertiesState = propertiesState,
                     onPropertiesStateChange = { propertiesState = it },
-                    providersState = providersState,
                     metaState = metaState,
-                    onMetaStateChange = { metaState = it },
+                    onMetaStateChange = {
+                        metaState = it
+                        persistMetaState(it)
+                    },
                     onRequireRecreate = { recreate() },
-                    onHideIconChange = { hidden -> setLauncherIconVisible(!hidden) },
                     onPickProfileFile = { pickProfileFile.launch(arrayOf("*/*")) },
                     onThemeStateChange = {
                         themeState = it
@@ -274,12 +275,31 @@ class ClashNeoComposeActivity : ComponentActivity() {
     }
 
     /**
+     * Detaches the controller from the process-wide broadcasts registry.
+     *
+     * `recreate()` is not hypothetical here: the hide-from-recents switch calls it. Each discarded
+     * instance used to leave its `ClashUiController` behind, observer and traffic job included, so
+     * every recreation leaked another observer and another poll loop.
+     */
+    override fun onDestroy() {
+        controller.stop()
+        super.onDestroy()
+    }
+
+    /**
      * Theme settings persist across launches.
      *
      * Without this the whole theme screen was decorative on restart: the palette, OS version and
      * predictive-back style all fell back to defaults on every cold start.
      */
     private fun loadThemeState(): ThemeUiState = ThemeStore(this).load()
+
+    /** Meta feature settings had no store at all, so leaving the screen discarded every edit. */
+    private fun loadMetaState(): MetaFeatureUiState = MetaFeatureStore(this).load()
+
+    private fun persistMetaState(state: MetaFeatureUiState) {
+        MetaFeatureStore(this).save(state)
+    }
 
     private fun persistThemeState(state: ThemeUiState) {
         ThemeStore(this).save(state)
@@ -334,30 +354,44 @@ class ClashNeoComposeActivity : ComponentActivity() {
         )
     }
 
-    /** Persists the two app-screen values that are plain preferences. */
-    private fun persistAppSettingsState(state: AppSettingsUiState) {
-        UiStore(this).hideFromRecents = state.hideFromRecents
-        ServiceStore(this).dynamicNotification = state.dynamicNotification
-    }
-
     /**
-     * Shows or hides the launcher entry.
+     * Persists the app-screen values and applies the two component toggles they represent.
      *
-     * Toggles the `MainActivityAlias` component rather than the activity itself: the alias is the
-     * component that carries the launcher intent-filter, so disabling it hides the icon without
-     * making the activity unreachable from inside the app. `DONT_KILL_APP` keeps the current
-     * process alive so the switch does not close the screen the user is looking at.
+     * `autoRestart` and `hideAppIcon` are not preferences: they are the enabled state of the
+     * `RestartReceiver` and `MainActivityAlias` components. Both used to be *read* from those flags
+     * but never written, so the switches were inert and any reload — including the `recreate()`
+     * that the sibling `hideFromRecents` switch triggers — snapped them back, which is the
+     * "settings reset themselves" symptom.
+     *
+     * The alias carries the launcher intent-filter, so disabling it hides the icon without making
+     * the activity unreachable from inside the app. `DONT_KILL_APP` keeps the process alive so the
+     * switch does not close the screen the user is looking at.
      */
-    private fun setLauncherIconVisible(visible: Boolean) {
+    private fun persistAppSettingsState(state: AppSettingsUiState) {
+        UiStore(this).apply {
+            hideFromRecents = state.hideFromRecents
+            // Kept in sync for the still-legacy screens that read it instead of the component.
+            hideAppIcon = state.hideAppIcon
+        }
+        ServiceStore(this).dynamicNotification = state.dynamicNotification
+
         packageManager.setComponentEnabledSetting(
-            mainActivityAlias,
-            if (visible) {
-                PackageManager.COMPONENT_ENABLED_STATE_ENABLED
-            } else {
-                PackageManager.COMPONENT_ENABLED_STATE_DISABLED
-            },
+            RestartReceiver::class.componentName,
+            componentState(enabled = state.autoRestart),
             PackageManager.DONT_KILL_APP,
         )
+        packageManager.setComponentEnabledSetting(
+            mainActivityAlias,
+            componentState(enabled = !state.hideAppIcon),
+            PackageManager.DONT_KILL_APP,
+        )
+    }
+
+    /** The `COMPONENT_ENABLED_STATE_*` value matching [enabled]. */
+    private fun componentState(enabled: Boolean): Int = if (enabled) {
+        PackageManager.COMPONENT_ENABLED_STATE_ENABLED
+    } else {
+        PackageManager.COMPONENT_ENABLED_STATE_DISABLED
     }
 }
 
@@ -394,11 +428,9 @@ private fun ClashNeoApp(
     onAppSettingsStateChange: (AppSettingsUiState) -> Unit,
     propertiesState: PropertiesUiState,
     onPropertiesStateChange: (PropertiesUiState) -> Unit,
-    providersState: ProvidersUiState,
     metaState: MetaFeatureUiState,
     onMetaStateChange: (MetaFeatureUiState) -> Unit,
     onRequireRecreate: () -> Unit,
-    onHideIconChange: (Boolean) -> Unit,
     onPickProfileFile: () -> Unit,
 ) {
     val pagerState = rememberPagerState(pageCount = { Tab.entries.size })
@@ -414,6 +446,7 @@ private fun ClashNeoApp(
     val logsState by controller.logs.collectAsStateWithLifecycle()
     val overrideState by controller.overrideState.collectAsStateWithLifecycle()
     val accessState by controller.access.collectAsStateWithLifecycle()
+    val providersState by controller.providers.collectAsStateWithLifecycle()
     val filesState by controller.files.collectAsStateWithLifecycle()
 
     val context = LocalContext.current
@@ -691,7 +724,6 @@ private fun ClashNeoApp(
                         modifier = Modifier.fillMaxSize(),
                         onBack = popBack,
                         onRequireRecreate = onRequireRecreate,
-                        onHideIconChange = onHideIconChange,
                     )
                 }
 
@@ -733,10 +765,13 @@ private fun ClashNeoApp(
                 }
 
                 entry<Route.Providers>(swipeDismiss = swipeDirection) {
+                    LaunchedEffect(Unit) { controller.refreshProviders() }
                     ProvidersPage(
                         state = providersState,
                         modifier = Modifier.fillMaxSize(),
                         onBack = popBack,
+                        onUpdate = controller::updateProvider,
+                        onUpdateAll = controller::updateAllProviders,
                     )
                 }
 

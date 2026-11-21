@@ -32,8 +32,10 @@ data class AppSettingsUiState(
 
 /**
  * @param onRequireRecreate invoked when a change only takes effect after the UI is recreated.
- * @param onHideIconChange invoked because hiding the launcher icon is applied to the component
- *   state, not to a preference the UI can render.
+ *
+ * Hiding the launcher icon is an ordinary persisted value here: it is written to the
+ * `MainActivityAlias` component in the host's `persistAppSettingsState`, so the row reflects the
+ * component state it actually toggles instead of snapping back on the next recomposition.
  */
 @Composable
 fun AppSettingsPage(
@@ -43,7 +45,6 @@ fun AppSettingsPage(
     outerPadding: PaddingValues = PaddingValues(),
     onBack: () -> Unit = {},
     onRequireRecreate: () -> Unit = {},
-    onHideIconChange: (Boolean) -> Unit = {},
 ) {
     MiuixPageScaffold(
         title = stringResource(R.string.app),
@@ -70,7 +71,7 @@ fun AppSettingsPage(
                     title = stringResource(R.string.hide_app_icon_title),
                     description = stringResource(R.string.hide_app_icon_desc),
                     checked = state.hideAppIcon,
-                    onCheckedChange = { onHideIconChange(it) },
+                    onCheckedChange = { onStateChange(state.copy(hideAppIcon = it)) },
                 )
                 MiuixSwitchWidget(
                     title = stringResource(R.string.hide_from_recents_title),

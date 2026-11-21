@@ -310,4 +310,36 @@
     <string name="override_save_failed">无法保存内核覆写配置</string>
     <string name="logs_deleted">日志文件已删除</string>
     <string name="logs_delete_failed">无法删除日志文件</string>
+
+    <!-- 提供者页 -->
+    <string name="providers_empty_title">没有提供者</string>
+    <string name="providers_empty_body_no_core">请先启动隧道；内核只有在运行时才会提供提供者列表。</string>
+    <string name="providers_empty_body_none">当前配置没有声明代理或规则提供者。</string>
+    <string name="providers_loading_title">正在加载提供者…</string>
+    <string name="providers_loading_body">正在向内核查询提供者列表。</string>
+    <string name="providers_error_title">提供者不可用</string>
+    <string name="providers_actions">操作</string>
+    <string name="providers_update_all">更新全部</string>
+    <string name="providers_update_all_summary">刷新所有具有远程来源的提供者</string>
+    <string name="providers_updating">正在更新…</string>
+    <string name="providers_update_failed">更新 %1$s 失败：%2$s</string>
+    <string name="providers_kind">%1$s(%2$s)</string>
+    <string name="provider_type_proxy">代理</string>
+    <string name="provider_type_rule">规则</string>
+    <string name="provider_vehicle_http">HTTP</string>
+    <string name="provider_vehicle_file">文件</string>
+    <string name="provider_vehicle_inline">内联</string>
+    <string name="provider_vehicle_compatible">兼容</string>
+
+    <!-- 文件页与文本预览 -->
+    <string name="files_directory">目录</string>
+    <string name="files_empty_directory">此目录为空</string>
+    <string name="file_preview_loading">正在读取文件…</string>
+    <string name="file_preview_empty">此文件为空</string>
+    <string name="file_preview_binary">此文件不是 UTF-8 文本，无法在此显示。</string>
+    <string name="file_preview_unreadable">无法读取此文件。</string>
+    <string name="file_preview_missing">此文件已不存在。</string>
+    <string name="file_preview_not_a_file">此条目不是普通文件。</string>
+    <string name="file_preview_io">读取文件失败：%1$s</string>
+    <string name="file_preview_truncated">文件大于 %1$s，仅显示开头部分。</string>
 </resources>

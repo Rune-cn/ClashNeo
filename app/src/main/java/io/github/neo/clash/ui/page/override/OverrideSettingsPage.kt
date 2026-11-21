@@ -34,7 +34,13 @@ data class OverrideSettingsUiState(
     val allowLan: Boolean = false,
     val allowIpv6: Boolean = false,
     val bindAddress: String = "*",
-    val authentication: Boolean = false,
+    /**
+     * Comma-separated `user:password` entries.
+     *
+     * A [String], not a [Boolean]: the core models this as a credential list, so a switch had no
+     * value it could write. Enabling it without credentials is not a state the core has.
+     */
+    val authentication: String = "",
     val externalController: String = "",
     val logLevelIndex: Int = 0,
     val modeIndex: Int = 0,
@@ -117,11 +123,10 @@ fun OverrideSettingsPage(
 
         item {
             SettingsSection(title = stringResource(R.string.override_section_controller)) {
-                MiuixSwitchWidget(
-                    title = stringResource(R.string.override_authentication),
-                    description = stringResource(R.string.override_authentication_summary),
-                    checked = state.authentication,
-                    onCheckedChange = { onStateChange(state.copy(authentication = it)) },
+                PortRow(
+                    label = stringResource(R.string.override_authentication),
+                    value = state.authentication,
+                    onChange = { onStateChange(state.copy(authentication = it)) },
                 )
                 PortRow(
                     label = stringResource(R.string.override_external_controller),

@@ -16,9 +16,13 @@ import io.github.neo.clash.ui.page.access.AccessControlUiState
 import io.github.neo.clash.ui.page.access.AccessMode
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import io.github.neo.clash.core.model.Provider
+import io.github.neo.clash.ui.page.providers.ProviderUi
+import io.github.neo.clash.ui.page.providers.ProvidersUiState
 import io.github.neo.clash.R
 import io.github.neo.clash.common.log.Log
 import io.github.neo.clash.core.bridge.Bridge
+import io.github.neo.clash.core.model.ConfigurationOverride
 import io.github.neo.clash.core.model.TunnelState
 import io.github.neo.clash.design.model.DarkMode
 import io.github.neo.clash.design.store.UiStore
@@ -41,6 +45,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeoutOrNull
 
 /**
@@ -82,11 +88,31 @@ class ClashUiController(
     private val _settings = MutableStateFlow(SettingsUiState())
     val settings: StateFlow<SettingsUiState> = _settings.asStateFlow()
 
+    private val _providers = MutableStateFlow(ProvidersUiState())
+    val providers: StateFlow<ProvidersUiState> = _providers.asStateFlow()
+
     private val _access = MutableStateFlow(AccessControlUiState())
     val access: StateFlow<AccessControlUiState> = _access.asStateFlow()
 
     private val _override = MutableStateFlow(OverrideSettingsUiState())
     val overrideState: StateFlow<OverrideSettingsUiState> = _override.asStateFlow()
+
+    /**
+     * Serialises override reads and writes.
+     *
+     * Both go through `queryOverride`/`patchOverride`, and the screen re-reads on every entry.
+     * Without a lock a read can run between a write's query and its patch and return the
+     * configuration that the write is about to replace.
+     */
+    private val overrideMutex = Mutex()
+
+    /**
+     * Incremented by every local override edit.
+     *
+     * A refresh samples it before querying and compares it afterwards, so an answer that was
+     * already stale when it arrived cannot undo an edit the user made while it was in flight.
+     */
+    private var overrideRevision = 0L
 
     private val _logs = MutableStateFlow(LogsUiState())
     val logs: StateFlow<LogsUiState> = _logs.asStateFlow()
@@ -624,6 +650,117 @@ class ClashUiController(
      * `ProfilesDesign.requestSave`.
      */
     /**
+     * Loads proxy and rule providers from the core.
+     *
+     * `IClashManager.queryProviders` already returns the core's own `Provider` records, so there is
+     * no need to talk to the REST controller. `coreRunning` is carried in the state because an empty
+     * list means two different things: the core is not running, or the active configuration really
+     * declares no providers.
+     */
+    fun refreshProviders() {
+        scope.launch {
+            val running = broadcasts.running.value
+            val previous = _providers.value
+
+            _providers.value = previous.copy(
+                loading = previous.providers.isEmpty(),
+                error = null,
+                coreRunning = running,
+            )
+
+            if (!running) {
+                _providers.value = _providers.value.copy(loading = false, providers = emptyList())
+                return@launch
+            }
+
+            runCatching { withClash { queryProviders() } }
+                .onSuccess { list ->
+                    _providers.value = ProvidersUiState(
+                        providers = list.map { provider ->
+                            ProviderUi(
+                                name = provider.name,
+                                type = provider.type,
+                                vehicleType = provider.vehicleType,
+                                updatedAt = provider.updatedAt,
+                            )
+                        }.sortedBy { it.name.lowercase() },
+                        loading = false,
+                        coreRunning = true,
+                    )
+                }
+                .onFailure { error ->
+                    Log.w("Query providers: $error", error)
+                    _providers.value = _providers.value.copy(
+                        loading = false,
+                        error = error.message ?: context.getString(R.string.providers_update_failed),
+                    )
+                }
+        }
+    }
+
+    /**
+     * Refreshes one provider.
+     *
+     * The row is marked updating first so a second tap cannot start a duplicate request against the
+     * same endpoint, and the flag is cleared on both outcomes.
+     */
+    fun updateProvider(provider: ProviderUi) {
+        if (!provider.updatable) return
+
+        markProviderUpdating(provider.name, true)
+
+        scope.launch {
+            val result = runCatching {
+                withClash { updateProvider(provider.type, provider.name) }
+            }
+
+            markProviderUpdating(provider.name, false)
+
+            result.onSuccess { refreshProviders() }
+                .onFailure { error ->
+                    Log.w("Update provider: $error", error)
+                    postMessage(
+                        error.message ?: context.getString(R.string.providers_update_failed),
+                        isError = true,
+                    )
+                }
+        }
+    }
+
+    /** Refreshes every provider that has a remote source. */
+    fun updateAllProviders() {
+        scope.launch {
+            val targets = _providers.value.providers.filter { it.updatable && !it.updating }
+            targets.forEach { markProviderUpdating(it.name, true) }
+
+            var failed = 0
+            targets.forEach { provider ->
+                runCatching { withClash { updateProvider(provider.type, provider.name) } }
+                    .onFailure { error ->
+                        failed += 1
+                        Log.w("Update provider ${provider.name}: $error", error)
+                    }
+            }
+
+            targets.forEach { markProviderUpdating(it.name, false) }
+            refreshProviders()
+
+            if (failed > 0) {
+                postMessage(context.getString(R.string.providers_update_failed), isError = true)
+            }
+        }
+    }
+
+    private fun markProviderUpdating(name: String, updating: Boolean) {
+        val current = _providers.value
+        _providers.value = current.copy(
+            providers = current.providers.map {
+                if (it.name == name) it.copy(updating = updating) else it
+            },
+        )
+    }
+
+    /**
      * Deletes every saved log file.
      *
      * The delete row on the log screen had no handler at all, so tapping it did nothing. The log
@@ -700,39 +837,36 @@ class ClashUiController(
         }
     }
 
-    /**
+/**
      * Reads the persisted override from the core.
      *
      * Overrides live in the core, not in a preferences file, so the only truthful source is
      * `queryOverride`. Without this the screen showed defaults that had no relation to the running
      * configuration.
+     *
+     * The read is deliberately defensive, because it is triggered from a `LaunchedEffect` on every
+     * entry into the screen and therefore races whatever the user is doing at that moment:
+     *
+     * - [overrideMutex] keeps it from running between the query and the patch of [saveOverride].
+     * - [overrideRevision] is sampled before the query and compared afterwards. If the user saved
+     *   while the query was in flight, the answer describes the configuration *before* that save,
+     *   and assigning it would visibly undo the edit — which is the "settings reset themselves"
+     *   symptom this screen kept showing.
      */
     fun refreshOverride() {
+        val revision = overrideRevision
+
         scope.launch {
             val result = runCatching {
-                withClash { queryOverride(io.github.neo.clash.core.Clash.OverrideSlot.Persist) }
+                overrideMutex.withLock {
+                    withClash { queryOverride(io.github.neo.clash.core.Clash.OverrideSlot.Persist) }
+                }
             }
 
             result.onSuccess { cfg ->
-                _override.value = OverrideSettingsUiState(
-                    httpPort = cfg.httpPort?.toString().orEmpty(),
-                    socksPort = cfg.socksPort?.toString().orEmpty(),
-                    mixedPort = cfg.mixedPort?.toString().orEmpty(),
-                    redirectPort = cfg.redirectPort?.toString().orEmpty(),
-                    tproxyPort = cfg.tproxyPort?.toString().orEmpty(),
-                    allowLan = cfg.allowLan ?: false,
-                    allowIpv6 = cfg.ipv6 ?: false,
-                    bindAddress = cfg.bindAddress.orEmpty(),
-                    authentication = !cfg.authentication.isNullOrEmpty(),
-                    externalController = cfg.externalController.orEmpty(),
-                    logLevelIndex = cfg.logLevel?.let { level ->
-                        io.github.neo.clash.core.model.LogMessage.Level.entries
-                            .indexOf(level)
-                    } ?: 0,
-                    modeIndex = cfg.mode?.let { mode ->
-                        io.github.neo.clash.core.model.TunnelState.Mode.entries.indexOf(mode)
-                    } ?: 0,
-                )
+                if (revision == overrideRevision) {
+                    _override.value = cfg.toUiState()
+                }
             }.onFailure { error ->
                 Log.w("Query override: $error", error)
                 postMessage(
@@ -746,31 +880,37 @@ class ClashUiController(
     /**
      * Writes the override back to the core.
      *
-     * The current override is re-read first and only the fields this screen owns are replaced:
-     * sending a fresh object would silently drop `secret`, `hosts` and the CORS block, which have no
-     * editor here.
+     * The flow is updated first. [OverrideSettingsUiState] is what the screen renders, so a write
+     * that only patched the core left every text field and switch showing the old value: the edit
+     * appeared to be rejected, and the next refresh confirmed the "reset".
+     *
+     * The current override is re-read inside the same lock before patching, and only the fields
+     * this screen owns are replaced: sending a fresh object would silently drop `secret`, `hosts`
+     * and the CORS block, which have no editor here.
+     *
+     * Every save carries the revision it was created at. If a newer edit arrived while this one
+     * waited for the lock, this one is skipped rather than patching a stale snapshot over the
+     * newer one, so fast typing cannot leave the core holding an earlier value than the screen.
      */
     fun saveOverride(state: OverrideSettingsUiState) {
+        val revision = ++overrideRevision
+
+        // Reflect the edit immediately; the screen collects this flow.
+        _override.value = state
+
         scope.launch {
             val result = runCatching {
-                withClash {
-                    val current = queryOverride(io.github.neo.clash.core.Clash.OverrideSlot.Persist)
-                    val next = current.copy(
-                        httpPort = state.httpPort.toIntOrNull(),
-                        socksPort = state.socksPort.toIntOrNull(),
-                        mixedPort = state.mixedPort.toIntOrNull(),
-                        redirectPort = state.redirectPort.toIntOrNull(),
-                        tproxyPort = state.tproxyPort.toIntOrNull(),
-                        allowLan = state.allowLan,
-                        ipv6 = state.allowIpv6,
-                        bindAddress = state.bindAddress.takeIf { it.isNotBlank() },
-                        externalController = state.externalController.takeIf { it.isNotBlank() },
-                        logLevel = io.github.neo.clash.core.model.LogMessage.Level.entries
-                            .getOrNull(state.logLevelIndex),
-                        mode = io.github.neo.clash.core.model.TunnelState.Mode.entries
-                            .getOrNull(state.modeIndex),
-                    )
-                    patchOverride(io.github.neo.clash.core.Clash.OverrideSlot.Persist, next)
+                overrideMutex.withLock {
+                    if (revision != overrideRevision) return@withLock
+
+                    withClash {
+                        val current =
+                            queryOverride(io.github.neo.clash.core.Clash.OverrideSlot.Persist)
+                        patchOverride(
+                            io.github.neo.clash.core.Clash.OverrideSlot.Persist,
+                            current.patchedWith(state),
+                        )
+                    }
                 }
             }
 
@@ -780,9 +920,64 @@ class ClashUiController(
                     error.message ?: context.getString(R.string.override_save_failed),
                     isError = true,
                 )
+                // The optimistic value never reached the core, so show what the core actually has
+                // instead of leaving a value on screen that the tunnel does not use.
+                refreshOverride()
             }
         }
     }
+
+    /** Projects the core's configuration onto the override screen. */
+    private fun ConfigurationOverride.toUiState(): OverrideSettingsUiState = OverrideSettingsUiState(
+        httpPort = httpPort?.toString().orEmpty(),
+        socksPort = socksPort?.toString().orEmpty(),
+        mixedPort = mixedPort?.toString().orEmpty(),
+        redirectPort = redirectPort?.toString().orEmpty(),
+        tproxyPort = tproxyPort?.toString().orEmpty(),
+        allowLan = allowLan ?: false,
+        allowIpv6 = ipv6 ?: false,
+        bindAddress = bindAddress.orEmpty(),
+        authentication = authentication.orEmpty().joinToString(", "),
+        externalController = externalController.orEmpty(),
+        logLevelIndex = logLevel?.let { level ->
+            io.github.neo.clash.core.model.LogMessage.Level.entries.indexOf(level)
+        } ?: 0,
+        modeIndex = mode?.let { mode ->
+            io.github.neo.clash.core.model.TunnelState.Mode.entries.indexOf(mode)
+        } ?: 0,
+    )
+
+    /**
+     * Applies the override screen onto the core's configuration, field by field.
+     *
+     * `authentication` is a list of `user:password` entries in the core, so the screen's
+     * comma-separated text is split into one entry per non-blank item; blank text clears it.
+     */
+    private fun ConfigurationOverride.patchedWith(
+        state: OverrideSettingsUiState,
+    ): ConfigurationOverride = copy(
+        httpPort = state.httpPort.toIntOrNull(),
+        socksPort = state.socksPort.toIntOrNull(),
+        mixedPort = state.mixedPort.toIntOrNull(),
+        redirectPort = state.redirectPort.toIntOrNull(),
+        tproxyPort = state.tproxyPort.toIntOrNull(),
+        authentication = state.authentication.toCredentialList(),
+        allowLan = state.allowLan,
+        ipv6 = state.allowIpv6,
+        bindAddress = state.bindAddress.takeIf { it.isNotBlank() },
+        externalController = state.externalController.takeIf { it.isNotBlank() },
+        logLevel = io.github.neo.clash.core.model.LogMessage.Level.entries
+            .getOrNull(state.logLevelIndex),
+        mode = io.github.neo.clash.core.model.TunnelState.Mode.entries
+            .getOrNull(state.modeIndex),
+    )
+
+    /** Comma- or newline-separated `user:password` entries, as the core expects them. */
+    private fun String.toCredentialList(): List<String>? =
+        split(',', '\n')
+            .map { it.trim() }
+            .filter { it.isNotEmpty() }
+            .takeIf { it.isNotEmpty() }
 
     /**
      * Lists saved log files, newest first.

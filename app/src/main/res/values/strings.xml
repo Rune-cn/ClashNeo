@@ -317,4 +317,42 @@
     <string name="override_save_failed">Could not save the core override</string>
     <string name="logs_deleted">Log files deleted</string>
     <string name="logs_delete_failed">Could not delete the log files</string>
+
+    <!--
+        Providers screen. Providers are read from the core (`IClashManager.queryProviders`), so the
+        list exists only while the tunnel runs; the two `empty_body` strings say which of the two
+        reasons applies instead of showing one message that would be wrong half the time.
+    -->
+    <string name="providers_empty_title">No providers</string>
+    <string name="providers_empty_body_no_core">Start the tunnel first; the core only reports providers while it is running.</string>
+    <string name="providers_empty_body_none">The active configuration declares no proxy or rule providers.</string>
+    <string name="providers_loading_title">Loading providers…</string>
+    <string name="providers_loading_body">Asking the core for its provider list.</string>
+    <string name="providers_error_title">Providers unavailable</string>
+    <string name="providers_actions">Actions</string>
+    <string name="providers_update_all">Update all</string>
+    <string name="providers_update_all_summary">Refresh every provider that has a remote source</string>
+    <string name="providers_updating">updating…</string>
+    <string name="providers_update_failed">Update of %1$s failed: %2$s</string>
+    <!-- Kind of a provider row: %1$s is Proxy/Rule, %2$s the vehicle (HTTP, File, Inline…). -->
+    <string name="providers_kind">%1$s(%2$s)</string>
+    <string name="provider_type_proxy">Proxy</string>
+    <string name="provider_type_rule">Rule</string>
+    <string name="provider_vehicle_http">HTTP</string>
+    <string name="provider_vehicle_file">File</string>
+    <string name="provider_vehicle_inline">Inline</string>
+    <string name="provider_vehicle_compatible">Compatible</string>
+
+    <!-- Files screen: directory rows and the in-app text preview. -->
+    <string name="files_directory">Directory</string>
+    <string name="files_empty_directory">This directory is empty</string>
+    <string name="file_preview_loading">Reading the file…</string>
+    <string name="file_preview_empty">This file is empty</string>
+    <string name="file_preview_binary">This file is not UTF-8 text, so it cannot be shown here.</string>
+    <string name="file_preview_unreadable">This file cannot be read.</string>
+    <string name="file_preview_missing">This file no longer exists.</string>
+    <string name="file_preview_not_a_file">This entry is not a regular file.</string>
+    <string name="file_preview_io">The file could not be read: %1$s</string>
+    <!-- %1$s is the preview size limit, e.g. 256 KB. -->
+    <string name="file_preview_truncated">The file is larger than %1$s; only the beginning is shown.</string>
 </resources>

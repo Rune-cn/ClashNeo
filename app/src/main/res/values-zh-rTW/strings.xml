@@ -298,4 +298,36 @@
     <string name="override_save_failed">無法儲存核心覆寫設定</string>
     <string name="logs_deleted">日誌檔案已刪除</string>
     <string name="logs_delete_failed">無法刪除日誌檔案</string>
+
+    <!-- 提供者頁 -->
+    <string name="providers_empty_title">沒有提供者</string>
+    <string name="providers_empty_body_no_core">請先啟動通道；核心只有在執行時才會回報提供者。</string>
+    <string name="providers_empty_body_none">目前設定沒有宣告代理或規則提供者。</string>
+    <string name="providers_loading_title">正在載入提供者…</string>
+    <string name="providers_loading_body">正在向核心查詢提供者清單。</string>
+    <string name="providers_error_title">提供者無法使用</string>
+    <string name="providers_actions">操作</string>
+    <string name="providers_update_all">更新全部</string>
+    <string name="providers_update_all_summary">重新整理所有具有遠端來源的提供者</string>
+    <string name="providers_updating">正在更新…</string>
+    <string name="providers_update_failed">更新 %1$s 失敗：%2$s</string>
+    <string name="providers_kind">%1$s(%2$s)</string>
+    <string name="provider_type_proxy">代理</string>
+    <string name="provider_type_rule">規則</string>
+    <string name="provider_vehicle_http">HTTP</string>
+    <string name="provider_vehicle_file">檔案</string>
+    <string name="provider_vehicle_inline">內嵌</string>
+    <string name="provider_vehicle_compatible">相容</string>
+
+    <!-- 檔案頁與文字預覽 -->
+    <string name="files_directory">目錄</string>
+    <string name="files_empty_directory">此目錄為空</string>
+    <string name="file_preview_loading">正在讀取檔案…</string>
+    <string name="file_preview_empty">此檔案為空</string>
+    <string name="file_preview_binary">此檔案不是 UTF-8 文字，無法在此顯示。</string>
+    <string name="file_preview_unreadable">無法讀取此檔案。</string>
+    <string name="file_preview_missing">此檔案已不存在。</string>
+    <string name="file_preview_not_a_file">此項目不是一般檔案。</string>
+    <string name="file_preview_io">讀取檔案失敗：%1$s</string>
+    <string name="file_preview_truncated">檔案大於 %1$s，僅顯示開頭部分。</string>
 </resources>
