@@ -39,7 +39,7 @@ type fetchHeader struct {
 }
 
 func openUrl(ctx context.Context, url string) (io.ReadCloser, fetchHeader, error) {
-	response, err := clashHttp.HttpRequest(ctx, url, http.MethodGet, http.Header{"User-Agent": {"ClashMetaForAndroid/" + app.VersionName()}}, nil)
+	response, err := clashHttp.HttpRequest(ctx, url, http.MethodGet, http.Header{"User-Agent": {"ClashNeo/" + app.VersionName()}}, nil)
 
 	if err != nil {
 		return nil, fetchHeader{}, err
@@ -223,7 +223,7 @@ func FetchAndValid(
 			if pib, uok := provider["path-in-bundle"]; uok {
 				if pib, uok := pib.(string); uok && pib != "" {
 					// actually, we don't need to extract the file here; the core will do it.
-					// however, due to historical reasons, CMFA fetches provider content when loading profile,
+					// however, due to historical reasons, ClashNeo fetches provider content when loading profile,
 					// so we maintain consistency with the old behavior.
 					if file, err := RB.Open(pib); err == nil {
 						defer file.Close()

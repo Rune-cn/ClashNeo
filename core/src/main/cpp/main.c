@@ -12,9 +12,9 @@
 
 
 JNIEXPORT void JNICALL
-Java_com_github_kr328_clash_core_bridge_Bridge_nativeInit(JNIEnv *env, jobject thiz,
-                                                          jstring home,
-                                                          jstring version_name, jint sdk_version) {
+Java_io_github_neo_clash_core_bridge_Bridge_nativeInit(JNIEnv *env, jobject thiz,
+                                                       jstring home,
+                                                       jstring version_name, jint sdk_version) {
     TRACE_METHOD();
 
     scoped_string _home = get_string(home);
@@ -25,22 +25,22 @@ Java_com_github_kr328_clash_core_bridge_Bridge_nativeInit(JNIEnv *env, jobject t
 }
 
 JNIEXPORT void JNICALL
-Java_com_github_kr328_clash_core_bridge_Bridge_nativeReset(JNIEnv *env, jobject thiz) {
+Java_io_github_neo_clash_core_bridge_Bridge_nativeReset(JNIEnv *env, jobject thiz) {
     TRACE_METHOD();
 
     reset();
 }
 
 JNIEXPORT void JNICALL
-Java_com_github_kr328_clash_core_bridge_Bridge_nativeForceGc(JNIEnv *env, jobject thiz) {
+Java_io_github_neo_clash_core_bridge_Bridge_nativeForceGc(JNIEnv *env, jobject thiz) {
     TRACE_METHOD();
 
     forceGc();
 }
 
 JNIEXPORT void JNICALL
-Java_com_github_kr328_clash_core_bridge_Bridge_nativeSuspend(JNIEnv *env, jobject thiz,
-                                                             jboolean suspended) {
+Java_io_github_neo_clash_core_bridge_Bridge_nativeSuspend(JNIEnv *env, jobject thiz,
+                                                          jboolean suspended) {
     TRACE_METHOD();
 
     suspend((int) suspended);
@@ -48,7 +48,7 @@ Java_com_github_kr328_clash_core_bridge_Bridge_nativeSuspend(JNIEnv *env, jobjec
 
 
 JNIEXPORT jstring JNICALL
-Java_com_github_kr328_clash_core_bridge_Bridge_nativeQueryTunnelState(JNIEnv *env, jobject thiz) {
+Java_io_github_neo_clash_core_bridge_Bridge_nativeQueryTunnelState(JNIEnv *env, jobject thiz) {
     TRACE_METHOD();
 
     scoped_string response = queryTunnelState();
@@ -57,7 +57,7 @@ Java_com_github_kr328_clash_core_bridge_Bridge_nativeQueryTunnelState(JNIEnv *en
 }
 
 JNIEXPORT jlong JNICALL
-Java_com_github_kr328_clash_core_bridge_Bridge_nativeQueryTrafficNow(JNIEnv *env, jobject thiz) {
+Java_io_github_neo_clash_core_bridge_Bridge_nativeQueryTrafficNow(JNIEnv *env, jobject thiz) {
     TRACE_METHOD();
 
     uint64_t upload = 0l, download = 0l;
@@ -68,7 +68,7 @@ Java_com_github_kr328_clash_core_bridge_Bridge_nativeQueryTrafficNow(JNIEnv *env
 }
 
 JNIEXPORT jlong JNICALL
-Java_com_github_kr328_clash_core_bridge_Bridge_nativeQueryTrafficTotal(JNIEnv *env, jobject thiz) {
+Java_io_github_neo_clash_core_bridge_Bridge_nativeQueryTrafficTotal(JNIEnv *env, jobject thiz) {
     TRACE_METHOD();
 
     uint64_t upload = 0l, download = 0l;
@@ -79,8 +79,8 @@ Java_com_github_kr328_clash_core_bridge_Bridge_nativeQueryTrafficTotal(JNIEnv *e
 }
 
 JNIEXPORT void JNICALL
-Java_com_github_kr328_clash_core_bridge_Bridge_nativeNotifyDnsChanged(JNIEnv *env, jobject thiz,
-                                                                      jstring dns_list) {
+Java_io_github_neo_clash_core_bridge_Bridge_nativeNotifyDnsChanged(JNIEnv *env, jobject thiz,
+                                                                   jstring dns_list) {
     TRACE_METHOD();
 
     scoped_string _dns_list = get_string(dns_list);
@@ -89,8 +89,8 @@ Java_com_github_kr328_clash_core_bridge_Bridge_nativeNotifyDnsChanged(JNIEnv *en
 }
 
 JNIEXPORT void JNICALL
-Java_com_github_kr328_clash_core_bridge_Bridge_nativeNotifyTimeZoneChanged(JNIEnv *env, jobject thiz,
-                                                                           jstring name, jint offset) {
+Java_io_github_neo_clash_core_bridge_Bridge_nativeNotifyTimeZoneChanged(JNIEnv *env, jobject thiz,
+                                                                        jstring name, jint offset) {
     TRACE_METHOD();
 
     scoped_string _name = get_string(name);
@@ -99,9 +99,9 @@ Java_com_github_kr328_clash_core_bridge_Bridge_nativeNotifyTimeZoneChanged(JNIEn
 }
 
 JNIEXPORT void JNICALL
-Java_com_github_kr328_clash_core_bridge_Bridge_nativeNotifyInstalledAppChanged(JNIEnv *env,
-                                                                               jobject thiz,
-                                                                               jstring uid_list) {
+Java_io_github_neo_clash_core_bridge_Bridge_nativeNotifyInstalledAppChanged(JNIEnv *env,
+                                                                            jobject thiz,
+                                                                            jstring uid_list) {
     TRACE_METHOD();
 
     scoped_string _uid_list = get_string(uid_list);
@@ -110,13 +110,13 @@ Java_com_github_kr328_clash_core_bridge_Bridge_nativeNotifyInstalledAppChanged(J
 }
 
 JNIEXPORT void JNICALL
-Java_com_github_kr328_clash_core_bridge_Bridge_nativeStartTun(JNIEnv *env, jobject thiz,
-                                                              jint fd,
-                                                              jstring stack,
-                                                              jstring gateway,
-                                                              jstring portal,
-                                                              jstring dns,
-                                                              jobject cb) {
+Java_io_github_neo_clash_core_bridge_Bridge_nativeStartTun(JNIEnv *env, jobject thiz,
+                                                           jint fd,
+                                                           jstring stack,
+                                                           jstring gateway,
+                                                           jstring portal,
+                                                           jstring dns,
+                                                           jobject cb) {
     TRACE_METHOD();
 
     scoped_string _stack = get_string(stack);
@@ -129,15 +129,15 @@ Java_com_github_kr328_clash_core_bridge_Bridge_nativeStartTun(JNIEnv *env, jobje
 }
 
 JNIEXPORT void JNICALL
-Java_com_github_kr328_clash_core_bridge_Bridge_nativeStopTun(JNIEnv *env, jobject thiz) {
+Java_io_github_neo_clash_core_bridge_Bridge_nativeStopTun(JNIEnv *env, jobject thiz) {
     TRACE_METHOD();
 
     stopTun();
 }
 
 JNIEXPORT jstring JNICALL
-Java_com_github_kr328_clash_core_bridge_Bridge_nativeStartHttp(JNIEnv *env, jobject thiz,
-                                                               jstring listen_at) {
+Java_io_github_neo_clash_core_bridge_Bridge_nativeStartHttp(JNIEnv *env, jobject thiz,
+                                                            jstring listen_at) {
     TRACE_METHOD();
 
     scoped_string _listen_at = get_string(listen_at);
@@ -151,15 +151,15 @@ Java_com_github_kr328_clash_core_bridge_Bridge_nativeStartHttp(JNIEnv *env, jobj
 }
 
 JNIEXPORT void JNICALL
-Java_com_github_kr328_clash_core_bridge_Bridge_nativeStopHttp(JNIEnv *env, jobject thiz) {
+Java_io_github_neo_clash_core_bridge_Bridge_nativeStopHttp(JNIEnv *env, jobject thiz) {
     TRACE_METHOD();
 
     stopHttp();
 }
 
 JNIEXPORT jstring JNICALL
-Java_com_github_kr328_clash_core_bridge_Bridge_nativeQueryGroupNames(JNIEnv *env, jobject thiz,
-                                                                     jboolean exclude_not_selectable) {
+Java_io_github_neo_clash_core_bridge_Bridge_nativeQueryGroupNames(JNIEnv *env, jobject thiz,
+                                                                  jboolean exclude_not_selectable) {
     TRACE_METHOD();
 
     scoped_string response = queryGroupNames((int) exclude_not_selectable);
@@ -168,8 +168,8 @@ Java_com_github_kr328_clash_core_bridge_Bridge_nativeQueryGroupNames(JNIEnv *env
 }
 
 JNIEXPORT jstring JNICALL
-Java_com_github_kr328_clash_core_bridge_Bridge_nativeQueryGroup(JNIEnv *env, jobject thiz,
-                                                                jstring name, jstring mode) {
+Java_io_github_neo_clash_core_bridge_Bridge_nativeQueryGroup(JNIEnv *env, jobject thiz,
+                                                             jstring name, jstring mode) {
     TRACE_METHOD();
 
     scoped_string _name = get_string(name);
@@ -184,9 +184,9 @@ Java_com_github_kr328_clash_core_bridge_Bridge_nativeQueryGroup(JNIEnv *env, job
 }
 
 JNIEXPORT void JNICALL
-Java_com_github_kr328_clash_core_bridge_Bridge_nativeHealthCheck(JNIEnv *env, jobject thiz,
-                                                                 jobject completable,
-                                                                 jstring name) {
+Java_io_github_neo_clash_core_bridge_Bridge_nativeHealthCheck(JNIEnv *env, jobject thiz,
+                                                              jobject completable,
+                                                              jstring name) {
     TRACE_METHOD();
 
     jobject _completable = new_global(completable);
@@ -196,15 +196,15 @@ Java_com_github_kr328_clash_core_bridge_Bridge_nativeHealthCheck(JNIEnv *env, jo
 }
 
 JNIEXPORT void JNICALL
-Java_com_github_kr328_clash_core_bridge_Bridge_nativeHealthCheckAll(JNIEnv *env, jobject thiz) {
+Java_io_github_neo_clash_core_bridge_Bridge_nativeHealthCheckAll(JNIEnv *env, jobject thiz) {
     TRACE_METHOD();
 
     healthCheckAll();
 }
 
 JNIEXPORT jboolean JNICALL
-Java_com_github_kr328_clash_core_bridge_Bridge_nativePatchSelector(JNIEnv *env, jobject thiz,
-                                                                   jstring selector, jstring name) {
+Java_io_github_neo_clash_core_bridge_Bridge_nativePatchSelector(JNIEnv *env, jobject thiz,
+                                                                jstring selector, jstring name) {
     TRACE_METHOD();
 
     scoped_string _selector = get_string(selector);
@@ -214,8 +214,8 @@ Java_com_github_kr328_clash_core_bridge_Bridge_nativePatchSelector(JNIEnv *env, 
 }
 
 JNIEXPORT void JNICALL
-Java_com_github_kr328_clash_core_bridge_Bridge_nativeLoad(JNIEnv *env, jobject thiz,
-                                                          jobject completable, jstring path) {
+Java_io_github_neo_clash_core_bridge_Bridge_nativeLoad(JNIEnv *env, jobject thiz,
+                                                       jobject completable, jstring path) {
     TRACE_METHOD();
 
     jobject _completable = new_global(completable);
@@ -225,10 +225,10 @@ Java_com_github_kr328_clash_core_bridge_Bridge_nativeLoad(JNIEnv *env, jobject t
 }
 
 JNIEXPORT void JNICALL
-Java_com_github_kr328_clash_core_bridge_Bridge_nativeFetchAndValid(JNIEnv *env, jobject thiz,
-                                                                    jobject callback,
-                                                                    jstring path,
-                                                                    jstring url, jboolean force) {
+Java_io_github_neo_clash_core_bridge_Bridge_nativeFetchAndValid(JNIEnv *env, jobject thiz,
+                                                                jobject callback,
+                                                                jstring path,
+                                                                jstring url, jboolean force) {
     TRACE_METHOD();
 
     jobject _completable = new_global(callback);
@@ -239,8 +239,8 @@ Java_com_github_kr328_clash_core_bridge_Bridge_nativeFetchAndValid(JNIEnv *env, 
 }
 
 JNIEXPORT void JNICALL
-Java_com_github_kr328_clash_core_bridge_Bridge_nativeSetAgeSecretKey(JNIEnv *env, jobject thiz,
-                                                                      jstring key) {
+Java_io_github_neo_clash_core_bridge_Bridge_nativeSetAgeSecretKey(JNIEnv *env, jobject thiz,
+                                                                  jstring key) {
     TRACE_METHOD();
 
     if (key == NULL) {
@@ -254,7 +254,7 @@ Java_com_github_kr328_clash_core_bridge_Bridge_nativeSetAgeSecretKey(JNIEnv *env
 }
 
 JNIEXPORT jstring JNICALL
-Java_com_github_kr328_clash_core_bridge_Bridge_nativeGenX25519KeyPair(JNIEnv *env, jobject thiz) {
+Java_io_github_neo_clash_core_bridge_Bridge_nativeGenX25519KeyPair(JNIEnv *env, jobject thiz) {
     TRACE_METHOD();
 
     scoped_string response = genX25519KeyPair();
@@ -266,7 +266,7 @@ Java_com_github_kr328_clash_core_bridge_Bridge_nativeGenX25519KeyPair(JNIEnv *en
 }
 
 JNIEXPORT jstring JNICALL
-Java_com_github_kr328_clash_core_bridge_Bridge_nativeGenHybridKeyPair(JNIEnv *env, jobject thiz) {
+Java_io_github_neo_clash_core_bridge_Bridge_nativeGenHybridKeyPair(JNIEnv *env, jobject thiz) {
     TRACE_METHOD();
 
     scoped_string response = genHybridKeyPair();
@@ -278,8 +278,8 @@ Java_com_github_kr328_clash_core_bridge_Bridge_nativeGenHybridKeyPair(JNIEnv *en
 }
 
 JNIEXPORT jboolean JNICALL
-Java_com_github_kr328_clash_core_bridge_Bridge_nativeVeritySecretKeys(JNIEnv *env, jobject thiz,
-                                                                      jstring secret_keys) {
+Java_io_github_neo_clash_core_bridge_Bridge_nativeVeritySecretKeys(JNIEnv *env, jobject thiz,
+                                                                   jstring secret_keys) {
     TRACE_METHOD();
 
     if (secret_keys == NULL)
@@ -291,8 +291,8 @@ Java_com_github_kr328_clash_core_bridge_Bridge_nativeVeritySecretKeys(JNIEnv *en
 }
 
 JNIEXPORT jstring JNICALL
-Java_com_github_kr328_clash_core_bridge_Bridge_nativeToPublicKeys(JNIEnv *env, jobject thiz,
-                                                                  jstring secret_keys) {
+Java_io_github_neo_clash_core_bridge_Bridge_nativeToPublicKeys(JNIEnv *env, jobject thiz,
+                                                               jstring secret_keys) {
     TRACE_METHOD();
 
     if (secret_keys == NULL)
@@ -308,8 +308,8 @@ Java_com_github_kr328_clash_core_bridge_Bridge_nativeToPublicKeys(JNIEnv *env, j
 }
 
 JNIEXPORT jboolean JNICALL
-Java_com_github_kr328_clash_core_bridge_Bridge_nativeVerityPublicKeys(JNIEnv *env, jobject thiz,
-                                                                      jstring public_keys) {
+Java_io_github_neo_clash_core_bridge_Bridge_nativeVerityPublicKeys(JNIEnv *env, jobject thiz,
+                                                                   jstring public_keys) {
     TRACE_METHOD();
 
     if (public_keys == NULL)
@@ -321,7 +321,7 @@ Java_com_github_kr328_clash_core_bridge_Bridge_nativeVerityPublicKeys(JNIEnv *en
 }
 
 JNIEXPORT jstring JNICALL
-Java_com_github_kr328_clash_core_bridge_Bridge_nativeQueryProviders(JNIEnv *env, jobject thiz) {
+Java_io_github_neo_clash_core_bridge_Bridge_nativeQueryProviders(JNIEnv *env, jobject thiz) {
     TRACE_METHOD();
 
     scoped_string response = queryProviders();
@@ -330,10 +330,10 @@ Java_com_github_kr328_clash_core_bridge_Bridge_nativeQueryProviders(JNIEnv *env,
 }
 
 JNIEXPORT void JNICALL
-Java_com_github_kr328_clash_core_bridge_Bridge_nativeUpdateProvider(JNIEnv *env, jobject thiz,
-                                                                    jobject completable,
-                                                                    jstring type,
-                                                                    jstring name) {
+Java_io_github_neo_clash_core_bridge_Bridge_nativeUpdateProvider(JNIEnv *env, jobject thiz,
+                                                                 jobject completable,
+                                                                 jstring type,
+                                                                 jstring name) {
     TRACE_METHOD();
 
     jobject _completable = new_global(completable);
@@ -344,8 +344,8 @@ Java_com_github_kr328_clash_core_bridge_Bridge_nativeUpdateProvider(JNIEnv *env,
 }
 
 JNIEXPORT jstring JNICALL
-Java_com_github_kr328_clash_core_bridge_Bridge_nativeReadOverride(JNIEnv *env, jobject thiz,
-                                                                  jint slot) {
+Java_io_github_neo_clash_core_bridge_Bridge_nativeReadOverride(JNIEnv *env, jobject thiz,
+                                                               jint slot) {
     TRACE_METHOD();
 
     scoped_string response = readOverride(slot);
@@ -354,9 +354,9 @@ Java_com_github_kr328_clash_core_bridge_Bridge_nativeReadOverride(JNIEnv *env, j
 }
 
 JNIEXPORT void JNICALL
-Java_com_github_kr328_clash_core_bridge_Bridge_nativeWriteOverride(JNIEnv *env, jobject thiz,
-                                                                   jint slot,
-                                                                   jstring content) {
+Java_io_github_neo_clash_core_bridge_Bridge_nativeWriteOverride(JNIEnv *env, jobject thiz,
+                                                                jint slot,
+                                                                jstring content) {
     TRACE_METHOD();
 
     scoped_string _content = get_string(content);
@@ -365,15 +365,15 @@ Java_com_github_kr328_clash_core_bridge_Bridge_nativeWriteOverride(JNIEnv *env, 
 }
 
 JNIEXPORT void JNICALL
-Java_com_github_kr328_clash_core_bridge_Bridge_nativeClearOverride(JNIEnv *env, jobject thiz,
-                                                                   jint slot) {
+Java_io_github_neo_clash_core_bridge_Bridge_nativeClearOverride(JNIEnv *env, jobject thiz,
+                                                                jint slot) {
     TRACE_METHOD();
 
     clearOverride(slot);
 }
 
 JNIEXPORT jstring JNICALL
-Java_com_github_kr328_clash_core_bridge_Bridge_nativeQueryConfiguration(JNIEnv *env, jobject thiz) {
+Java_io_github_neo_clash_core_bridge_Bridge_nativeQueryConfiguration(JNIEnv *env, jobject thiz) {
     TRACE_METHOD();
 
     scoped_string response = queryConfiguration();
@@ -382,8 +382,8 @@ Java_com_github_kr328_clash_core_bridge_Bridge_nativeQueryConfiguration(JNIEnv *
 }
 
 JNIEXPORT void JNICALL
-Java_com_github_kr328_clash_core_bridge_Bridge_nativeSubscribeLogcat(JNIEnv *env, jobject thiz,
-                                                                     jobject callback) {
+Java_io_github_neo_clash_core_bridge_Bridge_nativeSubscribeLogcat(JNIEnv *env, jobject thiz,
+                                                                  jobject callback) {
     TRACE_METHOD();
 
     jobject _callback = new_global(callback);
@@ -551,12 +551,12 @@ JNI_OnLoad(JavaVM *vm, void *reserved) {
 
     initialize_jni(vm, env);
 
-    jclass c_tun_interface = find_class("com/github/kr328/clash/core/bridge/TunInterface");
+    jclass c_tun_interface = find_class("io/github/neo/clash/core/bridge/TunInterface");
     jclass c_completable = find_class("kotlinx/coroutines/CompletableDeferred");
-    jclass c_fetch_callback = find_class("com/github/kr328/clash/core/bridge/FetchCallback");
-    jclass c_logcat_interface = find_class("com/github/kr328/clash/core/bridge/LogcatInterface");
-    jclass _c_clash_exception = find_class("com/github/kr328/clash/core/bridge/ClashException");
-    jclass _c_content = find_class("com/github/kr328/clash/core/bridge/Content");
+    jclass c_fetch_callback = find_class("io/github/neo/clash/core/bridge/FetchCallback");
+    jclass c_logcat_interface = find_class("io/github/neo/clash/core/bridge/LogcatInterface");
+    jclass _c_clash_exception = find_class("io/github/neo/clash/core/bridge/ClashException");
+    jclass _c_content = find_class("io/github/neo/clash/core/bridge/Content");
     jclass c_throwable = find_class("java/lang/Throwable");
     jclass c_unit = find_class("kotlin/Unit");
 
@@ -602,7 +602,7 @@ JNI_OnLoad(JavaVM *vm, void *reserved) {
 }
 
 JNIEXPORT jstring JNICALL
-Java_com_github_kr328_clash_core_bridge_Bridge_nativeCoreVersion(JNIEnv *env, jobject thiz) {
+Java_io_github_neo_clash_core_bridge_Bridge_nativeCoreVersion(JNIEnv *env, jobject thiz) {
     TRACE_METHOD();
     
     char* Version = make_String(GIT_VERSION);

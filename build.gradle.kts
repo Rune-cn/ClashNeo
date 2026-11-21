@@ -47,12 +47,12 @@ subprojects {
         defaultConfig {
             if (isApp) {
                 val customApplicationId = queryConfigProperty("custom.application.id") as? String?
-                applicationId = customApplicationId.takeIf { it?.isNotBlank() == true } ?: "com.github.metacubex.clash"
+                applicationId = customApplicationId.takeIf { it?.isNotBlank() == true } ?: "io.github.neo.clash"
             }
 
             project.name.let { name ->
-                namespace = if (name == "app") "com.github.kr328.clash"
-                else "com.github.kr328.clash.$name"
+                namespace = if (name == "app") "io.github.neo.clash"
+                else "io.github.neo.clash.$name"
             }
 
             minSdk = 21
@@ -77,7 +77,7 @@ subprojects {
             if (!isApp) {
                 consumerProguardFiles("consumer-rules.pro")
             } else {
-                setProperty("archivesBaseName", "cmfa-$versionName")
+                setProperty("archivesBaseName", "clashneo-$versionName")
             }
         }
 

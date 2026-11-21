@@ -18,7 +18,7 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
 
     <!-- Workaround for Android 17+ cross profile loopback networking restrictions.
-         This permission allows CMFA to connect to loopback addresses and ports bound
+         This permission allows ClashNeo to connect to loopback addresses and ports bound
          by the same app running in different profiles.
          It can only be granted via ADB. -->
     <uses-permission android:name="android.permission.INTERACT_ACROSS_USERS"
@@ -84,20 +84,19 @@
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
 
-                <data android:scheme="clash"/>
-                <data android:scheme="clashmeta"/>
+                <data android:scheme="clashneo"/>
                 <data android:host="install-config"/>
             </intent-filter>
             <intent-filter>
-                <action android:name="com.github.metacubex.clash.meta.action.START_CLASH" />
+                <action android:name="io.github.neo.clash.action.START_CLASH" />
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
             <intent-filter>
-                <action android:name="com.github.metacubex.clash.meta.action.STOP_CLASH" />
+                <action android:name="io.github.neo.clash.action.STOP_CLASH" />
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
             <intent-filter>
-                <action android:name="com.github.metacubex.clash.meta.action.TOGGLE_CLASH" />
+                <action android:name="io.github.neo.clash.action.TOGGLE_CLASH" />
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity>
@@ -221,8 +220,8 @@
             android:exported="true">
             <intent-filter>
                 <action android:name="android.provider.Telephony.SECRET_CODE" />
-                <!-- 252746382 is the name of Clash Meta in T9 -->
-                <data android:scheme="android_secret_code" android:host="252746382" />
+                <!-- 25274636 is the name of ClashNeo in T9 (C=2 L=5 A=2 S=7 H=4 N=6 E=3 O=6) -->
+                <data android:scheme="android_secret_code" android:host="25274636" />
             </intent-filter>
         </receiver>
     </application>

@@ -1,5 +1,12 @@
 3th-party software licenses
 
+ClashNeo is a modified fork of MetaCubeX/ClashMetaForAndroid (also known as
+"Clash Meta for Android" / CMFA), renamed and repackaged as ClashNeo
+(io.github.neo.clash). Original work Copyright (C) MetaCubeX, CGQAQ and kr328.
+ClashNeo is distributed under the GNU General Public License v3.0; see the
+LICENSE file. Modifications made by the ClashNeo fork are also released under
+the GPL-3.0.
+
  * Clash
 ==========================================================================
                     GNU GENERAL PUBLIC LICENSE

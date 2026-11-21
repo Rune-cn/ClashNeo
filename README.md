@@ -1,14 +1,15 @@
-## Clash Meta for Android
+## ClashNeo
 
-A Graphical user interface of [Clash.Meta](https://github.com/MetaCubeX/Clash.Meta) for Android
+A Graphical user interface of [Clash.Meta](https://github.com/MetaCubeX/Clash.Meta) (mihomo) for Android.
+
+ClashNeo is a modified fork of [MetaCubeX/ClashMetaForAndroid](https://github.com/MetaCubeX/ClashMetaForAndroid),
+renamed to an independent application. It is distributed under the terms of the
+[GPL-3.0](https://www.gnu.org/licenses/gpl-3.0.html); see `LICENSE` and `NOTICE` for the original
+attribution to MetaCubeX, CGQAQ and kr328.
 
 ### Feature
 
 Feature of [Clash.Meta](https://github.com/MetaCubeX/Clash.Meta)
-
-[<img src="https://fdroid.gitlab.io/artwork/badge/get-it-on.png"
-     alt="Get it on F-Droid"
-     height="80">](https://f-droid.org/packages/com.github.metacubex.clash.meta/)
 
 ### Requirement
 
@@ -24,7 +25,7 @@ Feature of [Clash.Meta](https://github.com/MetaCubeX/Clash.Meta)
    git submodule update --init --recursive
    ```
 
-2. Install **OpenJDK 11**, **Android SDK**, **CMake** and **Golang**
+2. Install **OpenJDK 21**, **Android SDK**, **CMake** and **Golang**
 
 3. Create `local.properties` in project root with
 
@@ -35,10 +36,11 @@ Feature of [Clash.Meta](https://github.com/MetaCubeX/Clash.Meta)
 4. (Optional) Custom app package name. Add the following configuration to `local.properties`.
 
    ```properties
-   # config your ownn applicationId, or it will be 'com.github.metacubex.clash'
+   # config your own applicationId, or it will be 'io.github.neo.clash'
    custom.application.id=com.my.compile.clash
-   # remove application id suffix, or the applicaion id will be 'com.github.metacubex.clash.alpha'
+   # remove application id suffix, or the application id will be 'io.github.neo.clash.alpha'
    remove.suffix=true
+   ```
 
 5. Create `signing.properties` in project root with
 
@@ -57,22 +59,29 @@ Feature of [Clash.Meta](https://github.com/MetaCubeX/Clash.Meta)
 
 ### Automation
 
-APP package name is `com.github.metacubex.clash.meta`
+APP package name is `io.github.neo.clash`. The `alpha` and `meta` flavors append an application id
+suffix, so their package names are `io.github.neo.clash.alpha` and `io.github.neo.clash.meta`.
 
-- Toggle Clash.Meta service status
-  - Send intent to activity `com.github.kr328.clash.ExternalControlActivity` with action `com.github.metacubex.clash.meta.action.TOGGLE_CLASH`
-- Start Clash.Meta service
-  - Send intent to activity `com.github.kr328.clash.ExternalControlActivity` with action `com.github.metacubex.clash.meta.action.START_CLASH`
-- Stop Clash.Meta service
-  - Send intent to activity `com.github.kr328.clash.ExternalControlActivity` with action `com.github.metacubex.clash.meta.action.STOP_CLASH`
+The component names and intent actions below do not depend on the flavor, because the Kotlin package
+is `io.github.neo.clash` for every flavor.
+
+- Toggle ClashNeo service status
+  - Send intent to activity `io.github.neo.clash.ExternalControlActivity` with action `io.github.neo.clash.action.TOGGLE_CLASH`
+- Start ClashNeo service
+  - Send intent to activity `io.github.neo.clash.ExternalControlActivity` with action `io.github.neo.clash.action.START_CLASH`
+- Stop ClashNeo service
+  - Send intent to activity `io.github.neo.clash.ExternalControlActivity` with action `io.github.neo.clash.action.STOP_CLASH`
 - Import a profile
-  - URL Scheme `clash://install-config?url=<encoded URI>` or `clashmeta://install-config?url=<encoded URI>`
+  - URL Scheme `clashneo://install-config?url=<encoded URI>`
+
+The legacy `clash://` and `clashmeta://` URL schemes and the legacy
+`com.github.metacubex.clash.meta.action.*` intent actions are **not** supported.
 
 ### Contribution and Project Maintenance
 
 #### Meta Kernel
 
-- CMFA uses the kernel from `android-real` branch under `MetaCubeX/Clash.Meta`, which is a merge of the main `Alpha` branch and `android-open`.
+- ClashNeo uses the kernel from `android-real` branch under `MetaCubeX/Clash.Meta`, which is a merge of the main `Alpha` branch and `android-open`.
   - If you want to contribute to the kernel, make PRs to `Alpha` branch of the Meta kernel repository.
   - If you want to contribute Android-specific patches to the kernel, make PRs to  `android-open` branch of the Meta kernel repository.
 
