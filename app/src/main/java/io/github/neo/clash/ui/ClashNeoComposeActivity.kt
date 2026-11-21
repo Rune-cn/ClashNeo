@@ -505,6 +505,24 @@ private fun ClashNeoApp(
                                     modifier = Modifier.fillMaxSize(),
                                     outerPadding = PaddingValues(bottom = bottomInset),
                                     onActivate = controller::activateProfile,
+                            onEdit = { profile ->
+                                // Seed the editor from the stored profile, then push it. The uuid
+                                // travels inside the state so the entry needs no route parameter.
+                                onPropertiesStateChange(
+                                    PropertiesUiState(
+                                        uuid = profile.uuid.toString(),
+                                        name = profile.name,
+                                        url = profile.source,
+                                        ageSecretKey = profile.ageSecretKey.orEmpty(),
+                                        autoUpdateMinutes =
+                                            (profile.interval / 60_000L).toString(),
+                                    ),
+                                )
+                                navigateTo(Route.Properties(profile.uuid.toString()))
+                            },
+                            onUpdate = controller::updateProfile,
+                            onDuplicate = controller::duplicateProfile,
+                            onDelete = controller::deleteProfile,
                             onAddFromFile = onPickProfileFile,
                             onAddFromUrl = { url ->
                                 controller.createProfile(
@@ -602,7 +620,23 @@ private fun ClashNeoApp(
                         onStateChange = onPropertiesStateChange,
                         modifier = Modifier.fillMaxSize(),
                         onBack = popBack,
-                        onCommit = { onPropertiesStateChange(propertiesState.copy(dirty = false)) },
+                        onCommit = {
+                            controller.saveProfile(
+                                uuid = java.util.UUID.fromString(propertiesState.uuid),
+                                name = propertiesState.name,
+                                source = propertiesState.url,
+                                intervalMinutes =
+                                    propertiesState.autoUpdateMinutes.toLongOrNull() ?: 0L,
+                                ageSecretKey = propertiesState.ageSecretKey
+                                    .takeIf { it.isNotBlank() },
+                            )
+                            onPropertiesStateChange(propertiesState.copy(dirty = false))
+                        },
+                        onFetch = {
+                            controller.profiles.value.profiles
+                                .firstOrNull { it.uuid.toString() == propertiesState.uuid }
+                                ?.let(controller::updateProfile)
+                        },
                     )
                 }
 

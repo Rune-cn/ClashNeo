@@ -26,6 +26,8 @@ dependencies {
     implementation(libs.kotlin.coroutine)
     // Runtime half of `@Serializable` on `Route`; the compiler half is the Gradle plugin above.
     implementation(libs.kotlin.serialization.json)
+    // QR generation for sharing a profile. Generation only; decoding would need a camera stack.
+    implementation(libs.zxing.core)
     implementation(libs.androidx.core)
     implementation(libs.androidx.activity)
     implementation(libs.androidx.fragment)

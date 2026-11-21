@@ -4,51 +4,79 @@ package io.github.neo.clash.ui.page.profiles
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
-import androidx.compose.material.icons.rounded.Add
-import top.yukonga.miuix.kmp.basic.FloatingActionButton
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.neo.clash.R
 import io.github.neo.clash.service.model.Profile
 import io.github.neo.clash.ui.ProfilesUiState
 import io.github.neo.clash.ui.util.formatElapsed
+import io.github.neo.clash.ui.util.generateQrBitmap
+import io.github.neo.clash.ui.util.profileShareLink
+import io.github.neo.clash.ui.widget.MiuixNavigationItemWidget
 import io.github.neo.clash.ui.widget.MiuixPageScaffold
+import io.github.neo.clash.ui.widget.MiuixTextField
 import io.github.neo.clash.ui.widget.SettingsEntry
 import io.github.neo.clash.ui.widget.SettingsSection
+import top.yukonga.miuix.kmp.basic.Button
+import top.yukonga.miuix.kmp.basic.FloatingActionButton
 import top.yukonga.miuix.kmp.basic.Icon
+import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.theme.MiuixTheme
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import io.github.neo.clash.ui.widget.MiuixNavigationItemWidget
-import io.github.neo.clash.ui.widget.MiuixTextField
-import top.yukonga.miuix.kmp.basic.Button
 import top.yukonga.miuix.kmp.window.WindowBottomSheet
+
+/** How the user supplies a new profile. */
+enum class ProfileSource { FILE, URL, QR }
+
+private val ProfileSource.labelRes: Int
+    get() = when (this) {
+        ProfileSource.FILE -> R.string.add_profile_from_file
+        ProfileSource.URL -> R.string.add_profile_from_url
+        ProfileSource.QR -> R.string.add_profile_from_qr
+    }
+
+private val ProfileSource.summaryRes: Int
+    get() = when (this) {
+        ProfileSource.FILE -> R.string.add_profile_from_file_summary
+        ProfileSource.URL -> R.string.add_profile_from_url_summary
+        ProfileSource.QR -> R.string.add_profile_from_qr_summary
+    }
 
 /**
  * The 配置 (Profiles) tab.
  *
  * The list is the core's own `queryAll()` result, so the active marker reflects the service rather
- * than a local copy that could drift while a switch is in flight. While [ProfilesUiState.switching]
- * names a profile, that row is the only one disabled: tapping a second profile mid-switch would
- * race two activations against the same core.
+ * than a local copy that could drift while a switch is in flight.
+ *
+ * Per-profile actions mirror the upstream menu exactly — update, edit, duplicate, share as QR,
+ * delete — but live behind a trailing overflow button instead of a long-press menu: the upstream
+ * dialog was a five-item popup, and a chevron-free row gives no hint that it exists.
  */
 @Composable
 fun ProfilesPage(
@@ -56,18 +84,21 @@ fun ProfilesPage(
     modifier: Modifier = Modifier,
     outerPadding: PaddingValues = PaddingValues(),
     onActivate: (Profile) -> Unit,
+    onEdit: (Profile) -> Unit = {},
+    onUpdate: (Profile) -> Unit = {},
+    onDuplicate: (Profile) -> Unit = {},
+    onDelete: (Profile) -> Unit = {},
     onAddFromFile: () -> Unit = {},
     onAddFromUrl: (String) -> Unit = {},
     onAddFromQr: () -> Unit = {},
 ) {
-    // Sheet state is transient UI, so it lives here rather than being hoisted: no other screen
-    // needs to know whether the add-sheet is open.
+    // Sheet state is transient UI, so it lives here rather than being hoisted.
     var showAddSheet by remember { mutableStateOf(false) }
     var selectedSource by remember { mutableStateOf(ProfileSource.URL) }
     var urlInput by remember { mutableStateOf("") }
+    var actionTarget by remember { mutableStateOf<Profile?>(null) }
+    var shareTarget by remember { mutableStateOf<Profile?>(null) }
 
-    // The FAB is a sibling of the screen, not part of it: it must stay above the list and
-    // outside the scrolled content, otherwise it scrolls away and cannot be tapped at the end.
     Box(modifier = modifier.fillMaxSize()) {
         when {
             state.error != null -> MessageScreen(
@@ -108,6 +139,7 @@ fun ProfilesPage(
                             switching = state.switching == profile.uuid,
                             anySwitching = state.switching != null,
                             onActivate = onActivate,
+                            onShowActions = { actionTarget = profile },
                         )
                     }
                 }
@@ -118,7 +150,6 @@ fun ProfilesPage(
             onClick = { showAddSheet = true },
             modifier = Modifier
                 .align(Alignment.BottomEnd)
-                // Clear the navigation bar: the FAB sits above it rather than on top of it.
                 .padding(end = 20.dp, bottom = outerPadding.calculateBottomPadding() + 20.dp),
         ) {
             Icon(
@@ -127,8 +158,6 @@ fun ProfilesPage(
             )
         }
 
-        // Slides up from the bottom, matching the upstream flow for adding a profile: pick a
-        // source first, then supply only the field that source needs.
         WindowBottomSheet(
             show = showAddSheet,
             onDismissRequest = { showAddSheet = false },
@@ -175,8 +204,97 @@ fun ProfilesPage(
                 }
             }
         }
-    }
 
+        // --- per-profile actions ---
+        actionTarget?.let { profile ->
+            WindowBottomSheet(
+                show = true,
+                onDismissRequest = { actionTarget = null },
+                title = profile.name,
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 24.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    MiuixNavigationItemWidget(
+                        title = stringResource(R.string.profile_fetch),
+                        description = stringResource(R.string.profile_fetch_summary),
+                        onClick = { onUpdate(profile); actionTarget = null },
+                    )
+                    MiuixNavigationItemWidget(
+                        title = stringResource(R.string.edit),
+                        description = stringResource(R.string.properties),
+                        onClick = { onEdit(profile); actionTarget = null },
+                    )
+                    MiuixNavigationItemWidget(
+                        title = stringResource(R.string.duplicate),
+                        description = stringResource(R.string.profile_duplicate_summary),
+                        onClick = { onDuplicate(profile); actionTarget = null },
+                    )
+                    MiuixNavigationItemWidget(
+                        title = stringResource(R.string.profile_share_qr),
+                        description = stringResource(R.string.profile_url_hint),
+                        onClick = { shareTarget = profile; actionTarget = null },
+                    )
+                    MiuixNavigationItemWidget(
+                        title = stringResource(R.string.profile_delete),
+                        description = stringResource(R.string.profile_delete_confirm),
+                        onClick = { onDelete(profile); actionTarget = null },
+                    )
+                }
+            }
+        }
+
+        // --- share as QR ---
+        shareTarget?.let { profile ->
+            WindowBottomSheet(
+                show = true,
+                onDismissRequest = { shareTarget = null },
+                title = stringResource(R.string.profile_share_qr),
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 24.dp, vertical = 8.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    // Encodes the app's install-config link, so another install can import the
+                    // profile directly instead of the raw subscription URL.
+                    val qr = remember(profile.source) {
+                        generateQrBitmap(profileShareLink(profile.source))
+                    }
+
+                    if (qr != null) {
+                        Box(
+                            modifier = Modifier
+                                .size(240.dp)
+                                .background(Color.White, RoundedCornerShape(12.dp))
+                                .padding(12.dp),
+                        ) {
+                            Image(bitmap = qr, contentDescription = null)
+                        }
+                    } else {
+                        Text(
+                            text = stringResource(R.string.profile_qr_unavailable),
+                            fontSize = 14.sp,
+                            color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                        )
+                    }
+
+                    Text(
+                        text = profile.name,
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = MiuixTheme.colorScheme.onSurface,
+                    )
+                    Box(modifier = Modifier.padding(bottom = 16.dp)) { }
+                }
+            }
+        }
+    }
 }
 
 @Composable
@@ -185,6 +303,7 @@ private fun ProfileRow(
     switching: Boolean,
     anySwitching: Boolean,
     onActivate: (Profile) -> Unit,
+    onShowActions: () -> Unit,
 ) {
     Box(modifier = Modifier.padding(bottom = 4.dp)) {
         SettingsSection(title = profile.name) {
@@ -217,12 +336,21 @@ private fun ProfileRow(
                             color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                         )
 
-                        else -> AnimatedVisibility(
-                            visible = profile.active,
-                            enter = scaleIn(),
-                            exit = scaleOut(),
-                        ) {
-                            ActiveMark()
+                        else -> {
+                            AnimatedVisibility(
+                                visible = profile.active,
+                                enter = scaleIn(),
+                                exit = scaleOut(),
+                            ) {
+                                ActiveMark()
+                            }
+                            IconButton(onClick = onShowActions) {
+                                Icon(
+                                    imageVector = Icons.Rounded.MoreVert,
+                                    contentDescription = stringResource(R.string.profile_menu),
+                                    tint = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                                )
+                            }
                         }
                     }
                 },
@@ -239,23 +367,6 @@ private fun ActiveMark() {
         contentDescription = null,
     )
 }
-
-/** How the user supplies the new profile. */
-enum class ProfileSource { FILE, URL, QR }
-
-private val ProfileSource.labelRes: Int
-    get() = when (this) {
-        ProfileSource.FILE -> R.string.add_profile_from_file
-        ProfileSource.URL -> R.string.add_profile_from_url
-        ProfileSource.QR -> R.string.add_profile_from_qr
-    }
-
-private val ProfileSource.summaryRes: Int
-    get() = when (this) {
-        ProfileSource.FILE -> R.string.add_profile_from_file_summary
-        ProfileSource.URL -> R.string.add_profile_from_url_summary
-        ProfileSource.QR -> R.string.add_profile_from_qr_summary
-    }
 
 @Composable
 private fun MessageScreen(
@@ -297,5 +408,4 @@ private fun MessageScreen(
             }
         }
     }
-
-    }
+}

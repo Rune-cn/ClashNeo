@@ -394,4 +394,6 @@
     <string name="section_matching">Matching</string>
     <string name="import_file_summary">Pick a file from storage</string>
     <string name="add_profile">Add profile</string>
+    <string name="profile_fetch">Fetch now</string>
+    <string name="profile_fetch_summary">Download the latest version from its source</string>
 </resources>

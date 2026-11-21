@@ -301,4 +301,6 @@
     <string name="section_matching">匹配</string>
     <string name="import_file_summary">从存储中选择文件</string>
     <string name="add_profile">添加配置</string>
+    <string name="profile_fetch">立即拉取</string>
+    <string name="profile_fetch_summary">从来源下载最新版本</string>
 </resources>

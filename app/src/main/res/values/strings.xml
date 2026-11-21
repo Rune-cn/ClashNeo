@@ -295,4 +295,19 @@
     <string name="add_profile_succeeded">Profile added</string>
     <string name="add_profile_failed">Failed to add profile</string>
     <string name="add_profile_qr_unavailable">QR import is not available yet</string>
+    <string name="profile_update_not_applicable">This profile has no remote source to fetch</string>
+    <string name="profile_update_failed_generic">Failed to fetch the profile</string>
+    <string name="profile_duplicate_failed">Failed to duplicate the profile</string>
+    <string name="profile_delete_failed">Failed to delete the profile</string>
+    <string name="profile_menu">Profile actions</string>
+    <string name="profile_share_qr">Share as QR code</string>
+    <string name="profile_delete">Delete</string>
+    <string name="profile_delete_confirm">Delete this profile?</string>
+    <string name="profile_fetch">Fetch now</string>
+    <string name="profile_qr_unavailable">Could not generate a QR code for this profile</string>
+    <string name="edit">Edit</string>
+    <string name="properties">Profile properties</string>
+    <string name="duplicate">Duplicate</string>
+    <string name="profile_fetch_summary">Download the latest version from its source</string>
+    <string name="profile_duplicate_summary">Create a copy of this profile</string>
 </resources>

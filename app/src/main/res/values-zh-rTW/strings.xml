@@ -276,4 +276,19 @@
     <string name="add_profile_succeeded">設定檔已新增</string>
     <string name="add_profile_failed">新增設定檔失敗</string>
     <string name="add_profile_qr_unavailable">尚未支援 QR 碼匯入</string>
+    <string name="profile_update_not_applicable">此設定檔沒有可拉取的遠端來源</string>
+    <string name="profile_update_failed_generic">拉取設定檔失敗</string>
+    <string name="profile_duplicate_failed">複製設定檔失敗</string>
+    <string name="profile_delete_failed">刪除設定檔失敗</string>
+    <string name="profile_menu">設定檔操作</string>
+    <string name="profile_share_qr">分享為 QR 碼</string>
+    <string name="profile_delete">刪除</string>
+    <string name="profile_delete_confirm">確定刪除此設定檔？</string>
+    <string name="profile_fetch">立即拉取</string>
+    <string name="profile_qr_unavailable">無法為此設定檔產生 QR 碼</string>
+    <string name="edit">編輯</string>
+    <string name="properties">設定檔屬性</string>
+    <string name="duplicate">複製</string>
+    <string name="profile_fetch_summary">從來源下載最新版本</string>
+    <string name="profile_duplicate_summary">建立此設定檔的副本</string>
 </resources>

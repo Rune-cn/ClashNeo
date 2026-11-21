@@ -27,6 +27,8 @@ import io.github.neo.clash.ui.widget.SettingsSection
  */
 @Immutable
 data class PropertiesUiState(
+    /** Which profile is being edited; empty before the screen is seeded. */
+    val uuid: String = "",
     val name: String = "",
     val url: String = "",
     val ageSecretKey: String = "",
@@ -51,6 +53,7 @@ fun PropertiesPage(
     onBack: () -> Unit = {},
     onCommit: () -> Unit = {},
     onBrowseFiles: () -> Unit = {},
+    onFetch: () -> Unit = {},
 ) {
     MiuixPageScaffold(
         title = stringResource(R.string.profile),
@@ -113,6 +116,13 @@ fun PropertiesPage(
                     title = stringResource(R.string.save),
                     description = stringResource(R.string.commit_changes),
                     onClick = onCommit,
+                )
+                MiuixNavigationItemWidget(
+                    title = stringResource(R.string.profile_fetch),
+                    description = stringResource(R.string.profile_fetch_summary),
+                    // Fetching re-reads the *stored* source, not this screen's unsaved text, so it
+                    // is only offered once the edits have been committed.
+                    onClick = { if (!state.dirty) onFetch() },
                 )
             }
         }

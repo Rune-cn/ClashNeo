@@ -601,6 +601,104 @@ class ClashUiController(
     }
 
     /**
+     * Persists edits to a profile.
+     *
+     * [intervalMinutes] is minutes because that is what the UI collects; the core stores
+     * milliseconds, so the conversion happens here rather than at the call site where it is easy to
+     * get wrong by a factor of 60.
+     */
+    fun saveProfile(
+        uuid: UUID,
+        name: String,
+        source: String,
+        intervalMinutes: Long,
+        ageSecretKey: String?,
+    ) {
+        if (name.isBlank() || source.isBlank()) {
+            postMessage(context.getString(R.string.add_profile_invalid), isError = true)
+            return
+        }
+
+        scope.launch {
+            val result = runCatching {
+                withProfile {
+                    patch(
+                        uuid = uuid,
+                        name = name,
+                        source = source,
+                        interval = TimeUnit.MINUTES.toMillis(intervalMinutes),
+                        ageSecretKey = ageSecretKey,
+                    )
+                }
+            }
+
+            result.onSuccess { refreshProfiles() }
+                .onFailure { error ->
+                    Log.w("Save profile: $error", error)
+                    postMessage(
+                        error.message ?: context.getString(R.string.add_profile_failed),
+                        isError = true,
+                    )
+                }
+        }
+    }
+
+    /**
+     * Re-downloads a profile from its source ("拉取配置").
+     *
+     * Only meaningful for URL profiles; a file or external profile has nothing to fetch, so the
+     * call is skipped rather than issued and failed by the core.
+     */
+    fun updateProfile(profile: Profile) {
+        if (profile.type == Profile.Type.File || profile.type == Profile.Type.External) {
+            postMessage(context.getString(R.string.profile_update_not_applicable), isError = true)
+            return
+        }
+
+        scope.launch {
+            val result = runCatching { withProfile { update(profile.uuid) } }
+            result.onSuccess { refreshProfiles() }
+                .onFailure { error ->
+                    Log.w("Update profile: $error", error)
+                    postMessage(
+                        error.message ?: context.getString(R.string.profile_update_failed_generic),
+                        isError = true,
+                    )
+                }
+        }
+    }
+
+    /** Copies a profile, including its source and interval. */
+    fun duplicateProfile(profile: Profile) {
+        scope.launch {
+            val result = runCatching { withProfile { clone(profile.uuid) } }
+            result.onSuccess { refreshProfiles() }
+                .onFailure { error ->
+                    Log.w("Duplicate profile: $error", error)
+                    postMessage(
+                        error.message ?: context.getString(R.string.profile_duplicate_failed),
+                        isError = true,
+                    )
+                }
+        }
+    }
+
+    /** Deletes a profile. Irreversible on the core side, so the host confirms first. */
+    fun deleteProfile(profile: Profile) {
+        scope.launch {
+            val result = runCatching { withProfile { delete(profile.uuid) } }
+            result.onSuccess { refreshProfiles() }
+                .onFailure { error ->
+                    Log.w("Delete profile: $error", error)
+                    postMessage(
+                        error.message ?: context.getString(R.string.profile_delete_failed),
+                        isError = true,
+                    )
+                }
+        }
+    }
+
+    /**
      * Creates a profile and refreshes the list.
      *
      * [name] is derived from the source when the caller has nothing better: the core requires a

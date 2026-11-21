@@ -282,4 +282,6 @@
     <string name="section_matching">比對</string>
     <string name="import_file_summary">從儲存空間選擇檔案</string>
     <string name="add_profile">新增設定檔</string>
+    <string name="profile_fetch">立即拉取</string>
+    <string name="profile_fetch_summary">從來源下載最新版本</string>
 </resources>
