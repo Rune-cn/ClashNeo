@@ -6,24 +6,26 @@ import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.PredictiveBackHandler
-import androidx.compose.runtime.mutableFloatStateOf
-import kotlinx.coroutines.CancellationException
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.spring
+import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.asPaddingValues
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.navigationBars
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.only
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Dashboard
 import androidx.compose.material.icons.rounded.Description
@@ -32,52 +34,60 @@ import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
-import io.github.neo.clash.BuildConfig
-import kotlin.math.absoluteValue
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
-import io.github.neo.clash.LogcatActivity
-import io.github.neo.clash.LogcatService
-import io.github.neo.clash.LogsActivity
+import io.github.neo.clash.BuildConfig
 import io.github.neo.clash.NetworkSettingsActivity
 import io.github.neo.clash.R
 import io.github.neo.clash.SettingsActivity
 import io.github.neo.clash.common.util.intent
 import io.github.neo.clash.design.store.UiStore.Companion.mainActivityAlias
+import io.github.neo.clash.ui.animation.predictiveback.appNavTransition
+import io.github.neo.clash.ui.library.FloatingBottomBar
+import io.github.neo.clash.ui.library.FloatingBottomBarMode
+import io.github.neo.clash.ui.navigation.Route
 import io.github.neo.clash.ui.page.about.AboutPage
+import io.github.neo.clash.ui.page.about.AboutUiState
 import io.github.neo.clash.ui.page.access.AccessControlPage
 import io.github.neo.clash.ui.page.access.AccessControlUiState
-import io.github.neo.clash.ui.page.network.NetworkSettingsPage
-import io.github.neo.clash.ui.page.network.NetworkSettingsUiState
-import io.github.neo.clash.ui.page.override.OverrideSettingsPage
-import io.github.neo.clash.ui.page.override.OverrideSettingsUiState
-import io.github.neo.clash.ui.page.about.AboutUiState
 import io.github.neo.clash.ui.page.appsettings.AppSettingsPage
 import io.github.neo.clash.ui.page.appsettings.AppSettingsUiState
 import io.github.neo.clash.ui.page.control.ControlPage
-import io.github.neo.clash.ui.page.profiles.ProfilesPage
-
 import io.github.neo.clash.ui.page.files.FileEntryUi
 import io.github.neo.clash.ui.page.files.FilesPage
 import io.github.neo.clash.ui.page.files.FilesUiState
+import io.github.neo.clash.ui.page.licenses.LicensesUiState
 import io.github.neo.clash.ui.page.logs.LogsPage
+import io.github.neo.clash.ui.page.logs.LogsUiState
 import io.github.neo.clash.ui.page.metafeatures.MetaFeatureSettingsPage
 import io.github.neo.clash.ui.page.metafeatures.MetaFeatureUiState
-import io.github.neo.clash.ui.page.logs.LogsUiState
+import io.github.neo.clash.ui.page.network.NetworkSettingsPage
+import io.github.neo.clash.ui.page.network.NetworkSettingsUiState
 import io.github.neo.clash.ui.page.newprofile.NewProfilePage
 import io.github.neo.clash.ui.page.newprofile.NewProfileUiState
+import io.github.neo.clash.ui.page.override.OverrideSettingsPage
+import io.github.neo.clash.ui.page.override.OverrideSettingsUiState
+import io.github.neo.clash.ui.page.profiles.ProfilesPage
 import io.github.neo.clash.ui.page.properties.PropertiesPage
 import io.github.neo.clash.ui.page.properties.PropertiesUiState
 import io.github.neo.clash.ui.page.providers.ProvidersPage
@@ -86,56 +96,44 @@ import io.github.neo.clash.ui.page.proxy.ProxyPage
 import io.github.neo.clash.ui.page.settings.SettingsPage
 import io.github.neo.clash.ui.page.settings.SettingsRoute
 import io.github.neo.clash.ui.page.settings.SettingsUiState
-import io.github.neo.clash.ui.page.theme.ThemeSettingsPage
-import io.github.neo.clash.ui.page.theme.ThemeMode
-import io.github.neo.clash.ui.page.theme.ThemeUiState
-
-import androidx.compose.ui.platform.LocalLayoutDirection
-import androidx.compose.ui.unit.LayoutDirection
-import io.github.neo.clash.ui.animation.predictiveback.appNavTransition
-import io.github.neo.clash.ui.navigation.Route
 import io.github.neo.clash.ui.page.theme.PredictiveBackAnimation
-import top.yukonga.miuix.kmp.nav.core.NavCornerClipMode
-import top.yukonga.miuix.kmp.nav.core.NavDisplay
-import top.yukonga.miuix.kmp.nav.core.NavDisplayEffects
-import top.yukonga.miuix.kmp.nav.transition.NavSwipeDirection
-import top.yukonga.miuix.kmp.nav.core.rememberNavBackStack
+import io.github.neo.clash.ui.page.theme.ThemeMode
+import io.github.neo.clash.ui.page.theme.ThemeSettingsPage
+import io.github.neo.clash.ui.page.theme.ThemeUiState
+import io.github.neo.clash.ui.page.licenses.LicensesPage
 import io.github.neo.clash.ui.theme.ClashNeoTheme
-
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.layout.WindowInsetsSides
-import androidx.compose.foundation.layout.only
-import androidx.compose.foundation.layout.safeDrawing
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.RectangleShape
-import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.sp
-import io.github.neo.clash.ui.library.FloatingBottomBar
-import io.github.neo.clash.ui.widget.MiuixGlassNavigationBar
-import io.github.neo.clash.ui.library.FloatingBottomBarMode
-import io.github.neo.clash.ui.theme.rememberMiuixBlurBackdrop
-import top.yukonga.miuix.kmp.basic.Icon
-import top.yukonga.miuix.kmp.basic.NavigationItem
-import top.yukonga.miuix.kmp.basic.Text
-import top.yukonga.miuix.kmp.blur.BlendColorEntry
-import top.yukonga.miuix.kmp.blur.BlurColors
-import top.yukonga.miuix.kmp.blur.layerBackdrop
-import top.yukonga.miuix.kmp.blur.rememberLayerBackdrop
-import top.yukonga.miuix.kmp.blur.textureBlur
-import top.yukonga.miuix.kmp.theme.MiuixTheme
 import io.github.neo.clash.ui.theme.getMiuixAppBarColor
 import io.github.neo.clash.ui.theme.miuixBlurEffect
-import top.yukonga.miuix.kmp.blur.LayerBackdrop
+import io.github.neo.clash.ui.theme.rememberMiuixBlurBackdrop
 import io.github.neo.clash.ui.widget.MiuixComponentHost
+import io.github.neo.clash.ui.widget.MiuixGlassNavigationBar
+import kotlin.math.absoluteValue
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.NavigationBar
 import top.yukonga.miuix.kmp.basic.NavigationBarItem
+import top.yukonga.miuix.kmp.basic.NavigationItem
 import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.SnackbarHost
 import top.yukonga.miuix.kmp.basic.SnackbarHostState
+import top.yukonga.miuix.kmp.basic.Text
+import top.yukonga.miuix.kmp.blur.BlendColorEntry
+import top.yukonga.miuix.kmp.blur.BlurColors
+import top.yukonga.miuix.kmp.blur.LayerBackdrop
+import top.yukonga.miuix.kmp.blur.layerBackdrop
+import top.yukonga.miuix.kmp.blur.rememberLayerBackdrop
+import top.yukonga.miuix.kmp.blur.textureBlur
+import top.yukonga.miuix.kmp.nav.core.NavCornerClipMode
+import top.yukonga.miuix.kmp.nav.core.NavDisplay
+import top.yukonga.miuix.kmp.nav.core.NavDisplayEffects
+import top.yukonga.miuix.kmp.nav.core.rememberNavBackStack
+import top.yukonga.miuix.kmp.nav.transition.NavSwipeDirection
+import top.yukonga.miuix.kmp.theme.MiuixTheme
+
+
+
 
 /**
  * The application's main screen.
@@ -230,7 +228,6 @@ class ClashNeoComposeActivity : ComponentActivity() {
                     onRequireRecreate = { recreate() },
                     onHideIconChange = { hidden -> setLauncherIconVisible(!hidden) },
                     onThemeStateChange = { themeState = it },
-                    onOpenLogs = { openLogs() },
                 )
             }
         }
@@ -243,12 +240,6 @@ class ClashNeoComposeActivity : ComponentActivity() {
         controller.refreshAll()
     }
 
-    /**
-     * Routes to the log viewer, preferring the live logcat screen when the log service is up.
-     *
-     * Mirrors `MainActivity`'s choice so the two entry points cannot disagree about which log
-     * screen a user lands on.
-     */
     /**
      * Shows or hides the launcher entry.
      *
@@ -267,11 +258,6 @@ class ClashNeoComposeActivity : ComponentActivity() {
             },
             PackageManager.DONT_KILL_APP,
         )
-    }
-
-    private fun openLogs() {
-        val target = if (LogcatService.running) LogcatActivity::class else LogsActivity::class
-        startActivity(target.intent)
     }
 }
 
@@ -319,7 +305,6 @@ private fun ClashNeoApp(
     onMetaStateChange: (MetaFeatureUiState) -> Unit,
     onRequireRecreate: () -> Unit,
     onHideIconChange: (Boolean) -> Unit,
-    onOpenLogs: () -> Unit,
 ) {
     val pagerState = rememberPagerState(pageCount = { Tab.entries.size })
     val scope = rememberCoroutineScope()
@@ -330,6 +315,7 @@ private fun ClashNeoApp(
     val profiles by controller.profiles.collectAsStateWithLifecycle()
 
     val context = LocalContext.current
+    val uriHandler = androidx.compose.ui.platform.LocalUriHandler.current
 
     LaunchedEffect(Unit) {
         controller.messages.collectLatest { message ->
@@ -470,7 +456,7 @@ private fun ClashNeoApp(
                                     outerPadding = PaddingValues(bottom = bottomInset),
                                     onToggle = controller::toggleTunnel,
                                     onRefresh = controller::refreshAll,
-                                    onOpenLogs = onOpenLogs,
+                                    onOpenLogs = { navigateTo(Route.Logs) },
                                     onOpenNetworkSettings = { navigateTo(Route.Network) },
                                 )
 
@@ -502,12 +488,8 @@ private fun ClashNeoApp(
                                             SettingsRoute.AppSettings -> navigateTo(Route.AppSettings)
                                             SettingsRoute.MetaFeatures ->
                                                 navigateTo(Route.MetaFeatures)
-                                            // Licenses still opens the XML settings hub: the
-                                            // licence list comes from generated third-party
-                                            // metadata that has no Compose screen yet.
-                                            else -> context.startActivity(
-                                                SettingsActivity::class.intent,
-                                            )
+                                            SettingsRoute.Licenses ->
+                                                navigateTo(Route.Licenses)
                                         }
                                     },
                                 )
@@ -619,6 +601,15 @@ private fun ClashNeoApp(
                     )
                 }
 
+                entry<Route.Licenses>(swipeDismiss = swipeDirection) {
+                    LicensesPage(
+                        state = LicensesUiState(),
+                        modifier = Modifier.fillMaxSize(),
+                        onBack = popBack,
+                        onOpen = { entry -> uriHandler.openUri(entry.url) },
+                    )
+                }
+
                 entry<Route.NewProfile>(swipeDismiss = swipeDirection) {
                     NewProfilePage(
                         state = NewProfileUiState(),
@@ -673,8 +664,6 @@ private fun MiuixBottomBar(
         //   OS4            -> MiuixGlassNavigationBar (glass pills, glass icons)
         //   OS3 + floating -> FloatingBottomBar (liquid-glass pill with a sliding indicator)
         //   OS3 + flush    -> plain NavigationBar, blurred behind
-        // Treating OS4 as "the floating bar with different blur" was wrong: the glass bar lays the
-        // items out differently and draws per-item glass, so it cannot be approximated by the pill.
         if (useOs4) {
             val horizontalSafeInsets =
                 WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal).asPaddingValues()

@@ -271,4 +271,6 @@
     <string name="override_external_controller">外部控制器</string>
     <string name="override_mode">模式</string>
     <string name="override_log_level">日志级别</string>
+    <string name="add_profile">添加配置</string>
+    <string name="licenses_intro">本应用所用组件及其许可证。</string>
 </resources>

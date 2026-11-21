@@ -393,4 +393,5 @@
     <string name="section_geodata">GEO data</string>
     <string name="section_matching">Matching</string>
     <string name="import_file_summary">Pick a file from storage</string>
+    <string name="add_profile">Add profile</string>
 </resources>

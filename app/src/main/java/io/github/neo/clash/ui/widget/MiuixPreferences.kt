@@ -4,37 +4,25 @@ package io.github.neo.clash.ui.widget
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import io.github.neo.clash.ui.theme.AppTheme
 import top.yukonga.miuix.kmp.basic.BasicComponentDefaults
 import top.yukonga.miuix.kmp.basic.DropdownItem
-import top.yukonga.miuix.kmp.glass.GlassDropdownPreference
-import top.yukonga.miuix.kmp.glass.GlassPopupDefaults
-import top.yukonga.miuix.kmp.material.GlassDefaults
 import top.yukonga.miuix.kmp.preference.WindowDropdownPreference
 import top.yukonga.miuix.kmp.preference.WindowSpinnerPreference
 
 /*
- * Single entry points for selection rows.
+ * Single entry points for every selection row.
  *
- * Every selection row in the app goes through this file instead of calling a Miuix preference
- * directly. That is what makes the OS3/OS4 switch global: the style is resolved once from the
- * ambient theme, so a new screen gets the correct presentation without the caller knowing which
- * style is active, and nobody has to remember to update each page when the OS4 style grows.
+ * Routing them through one file means the choice of widget lives in one place instead of being
+ * repeated per screen.
  *
- * The glass dropdown only supports plain text options. Items carrying an icon, summary or children
- * cannot be represented by it, so those fall back to the classic spinner instead of silently
- * dropping that content.
+ * These deliberately use the *classic* spinner and dropdown, not the glass variants. The glass
+ * popup re-styled the selector itself the moment OS4 was enabled, so choosing OS4 changed the very
+ * control the user was touching — a settings row should look identical regardless of the
+ * presentation family. Only the navigation chrome and the top bar change between OS3 and OS4.
  */
 
-private fun List<DropdownItem>.arePlainOptions(): Boolean = all {
-    it.enabled && it.icon == null && it.summary == null && it.children.isNullOrEmpty()
-}
-
 /**
- * Selection row over a list of plain labels, e.g. the theme-mode picker.
- *
- * This is the `List<String>` flavour: the glass dropdown accepts it directly, so no
- * [DropdownItem] wrapper is needed.
+ * Selection row over plain labels, e.g. a language or theme-mode picker.
  */
 @Composable
 fun MiuixDropdownPreference(
@@ -48,44 +36,21 @@ fun MiuixDropdownPreference(
     showValue: Boolean = true,
     insideMargin: PaddingValues = BasicComponentDefaults.InsideMargin,
 ) {
-    val scope = LocalMiuixComponentScope.current
-    val useOs4 = scope.useOs4 || AppTheme.useMiuixOs4
-
-    if (useOs4) {
-        GlassDropdownPreference(
-            onSelectedIndexChange = onSelectedIndexChange,
-            items = items,
-            selectedIndex = selectedIndex,
-            title = title,
-            backdrop = scope.pageBackdrop,
-            visuals = GlassPopupDefaults.visuals(style = GlassDefaults.style(AppTheme.isDark)),
-            modifier = modifier,
-            enabled = enabled,
-            showValue = showValue,
-            insideMargin = insideMargin,
-            renderInRootScaffold = scope.popupInRootScaffold,
-            summary = summary,
-        )
-    } else {
-        WindowDropdownPreference(
-            items = items,
-            selectedIndex = selectedIndex,
-            title = title,
-            modifier = modifier,
-            summary = summary,
-            enabled = enabled,
-            showValue = showValue,
-            insideMargin = insideMargin,
-            onSelectedIndexChange = onSelectedIndexChange,
-        )
-    }
+    WindowDropdownPreference(
+        items = items,
+        selectedIndex = selectedIndex,
+        title = title,
+        modifier = modifier,
+        summary = summary,
+        enabled = enabled,
+        showValue = showValue,
+        insideMargin = insideMargin,
+        onSelectedIndexChange = onSelectedIndexChange,
+    )
 }
 
 /**
- * Selection row over rich [DropdownItem]s, e.g. the palette picker.
- *
- * Falls back to the classic spinner whenever an option carries content the glass dropdown cannot
- * draw, so callers never lose an icon or summary in OS4.
+ * Selection row over rich [DropdownItem]s, e.g. the palette or predictive-back picker.
  */
 @Composable
 fun MiuixSpinnerPreference(
@@ -99,38 +64,15 @@ fun MiuixSpinnerPreference(
     showValue: Boolean = true,
     insideMargin: PaddingValues = BasicComponentDefaults.InsideMargin,
 ) {
-    val scope = LocalMiuixComponentScope.current
-    val useOs4 = scope.useOs4 || AppTheme.useMiuixOs4
-
-    if (useOs4 && items.arePlainOptions()) {
-        GlassDropdownPreference(
-            onSelectedIndexChange = { index ->
-                onSelectedIndexChange(index)
-                items[index].onClick?.invoke()
-            },
-            items = items.map { it.text },
-            selectedIndex = selectedIndex,
-            title = title,
-            backdrop = scope.pageBackdrop,
-            visuals = GlassPopupDefaults.visuals(style = GlassDefaults.style(AppTheme.isDark)),
-            modifier = modifier,
-            enabled = enabled,
-            showValue = showValue,
-            insideMargin = insideMargin,
-            renderInRootScaffold = scope.popupInRootScaffold,
-            summary = summary,
-        )
-    } else {
-        WindowSpinnerPreference(
-            items = items,
-            selectedIndex = selectedIndex,
-            title = title,
-            modifier = modifier,
-            summary = summary,
-            enabled = enabled,
-            showValue = showValue,
-            insideMargin = insideMargin,
-            onSelectedIndexChange = onSelectedIndexChange,
-        )
-    }
+    WindowSpinnerPreference(
+        items = items,
+        selectedIndex = selectedIndex,
+        title = title,
+        modifier = modifier,
+        summary = summary,
+        enabled = enabled,
+        showValue = showValue,
+        insideMargin = insideMargin,
+        onSelectedIndexChange = onSelectedIndexChange,
+    )
 }

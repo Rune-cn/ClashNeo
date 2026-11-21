@@ -57,4 +57,7 @@ sealed interface Route : NavKey {
 
     @Serializable
     data object MetaFeatures : Route
+
+    @Serializable
+    data object Licenses : Route
 }

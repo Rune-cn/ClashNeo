@@ -278,4 +278,6 @@
     <string name="override_external_controller">External controller</string>
     <string name="override_mode">Mode</string>
     <string name="override_log_level">Log level</string>
+    <string name="add_profile">Add profile</string>
+    <string name="licenses_intro">Components this application links against, with their licences.</string>
 </resources>

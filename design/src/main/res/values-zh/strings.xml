@@ -300,4 +300,5 @@
     <string name="section_geodata">GEO 数据</string>
     <string name="section_matching">匹配</string>
     <string name="import_file_summary">从存储中选择文件</string>
+    <string name="add_profile">添加配置</string>
 </resources>

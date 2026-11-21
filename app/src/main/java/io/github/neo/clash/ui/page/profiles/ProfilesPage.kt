@@ -4,6 +4,8 @@ package io.github.neo.clash.ui.page.profiles
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
+import androidx.compose.material.icons.rounded.Add
+import top.yukonga.miuix.kmp.basic.FloatingActionButton
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Box
@@ -46,51 +48,70 @@ fun ProfilesPage(
     modifier: Modifier = Modifier,
     outerPadding: PaddingValues = PaddingValues(),
     onActivate: (Profile) -> Unit,
+    onAddProfile: () -> Unit = {},
 ) {
-    when {
-        state.error != null -> MessageScreen(
-            pageTitle = stringResource(R.string.tab_profiles),
-            title = stringResource(R.string.profiles_unavailable),
-            body = state.error,
-            modifier = modifier,
-            outerPadding = outerPadding,
-        )
+    // The FAB is a sibling of the screen, not part of it: it must stay above the list and
+    // outside the scrolled content, otherwise it scrolls away and cannot be tapped at the end.
+    Box(modifier = modifier.fillMaxSize()) {
+        when {
+            state.error != null -> MessageScreen(
+                pageTitle = stringResource(R.string.tab_profiles),
+                title = stringResource(R.string.profiles_unavailable),
+                body = state.error,
+                modifier = Modifier.fillMaxSize(),
+                outerPadding = outerPadding,
+            )
 
-        state.profiles.isEmpty() && state.loading -> MessageScreen(
-            pageTitle = stringResource(R.string.tab_profiles),
-            title = stringResource(R.string.profiles_loading),
-            body = stringResource(R.string.profiles_loading_body),
-            modifier = modifier,
-            outerPadding = outerPadding,
-        )
+            state.profiles.isEmpty() && state.loading -> MessageScreen(
+                pageTitle = stringResource(R.string.tab_profiles),
+                title = stringResource(R.string.profiles_loading),
+                body = stringResource(R.string.profiles_loading_body),
+                modifier = Modifier.fillMaxSize(),
+                outerPadding = outerPadding,
+            )
 
-        state.profiles.isEmpty() -> MessageScreen(
-            pageTitle = stringResource(R.string.tab_profiles),
-            title = stringResource(R.string.profiles_empty),
-            body = stringResource(R.string.profiles_empty_body),
-            modifier = modifier,
-            outerPadding = outerPadding,
-        )
+            state.profiles.isEmpty() -> MessageScreen(
+                pageTitle = stringResource(R.string.tab_profiles),
+                title = stringResource(R.string.profiles_empty),
+                body = stringResource(R.string.profiles_empty_body),
+                modifier = Modifier.fillMaxSize(),
+                outerPadding = outerPadding,
+            )
 
-        else -> MiuixPageScaffold(
-            title = stringResource(R.string.tab_profiles),
-            modifier = modifier,
-            outerPadding = outerPadding,
-            horizontalPadding = 12.dp,
-            verticalPadding = 12.dp,
-        ) {
-            state.profiles.forEach { profile ->
-                item(key = profile.uuid.toString()) {
-                    ProfileRow(
-                        profile = profile,
-                        switching = state.switching == profile.uuid,
-                        anySwitching = state.switching != null,
-                        onActivate = onActivate,
-                    )
+            else -> MiuixPageScaffold(
+                title = stringResource(R.string.tab_profiles),
+                modifier = Modifier.fillMaxSize(),
+                outerPadding = outerPadding,
+                horizontalPadding = 12.dp,
+                verticalPadding = 12.dp,
+            ) {
+                state.profiles.forEach { profile ->
+                    item(key = profile.uuid.toString()) {
+                        ProfileRow(
+                            profile = profile,
+                            switching = state.switching == profile.uuid,
+                            anySwitching = state.switching != null,
+                            onActivate = onActivate,
+                        )
+                    }
                 }
             }
         }
+
+        FloatingActionButton(
+            onClick = onAddProfile,
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                // Clear the navigation bar: the FAB sits above it rather than on top of it.
+                .padding(end = 20.dp, bottom = outerPadding.calculateBottomPadding() + 20.dp),
+        ) {
+            Icon(
+                imageVector = Icons.Rounded.Add,
+                contentDescription = stringResource(R.string.add_profile),
+            )
+        }
     }
+
 }
 
 @Composable

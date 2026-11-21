@@ -47,6 +47,7 @@ import top.yukonga.miuix.kmp.basic.CardDefaults
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.theme.MiuixTheme
+import top.yukonga.miuix.kmp.theme.MiuixTheme.isDynamicColor
 
 /**
  * The 控制 (Control) tab.
@@ -242,25 +243,46 @@ private fun StatusCard(state: TunnelUiState) {
     val isDark = AppTheme.isDark
 
     val targetContainer = when (state.phase) {
-        TunnelPhase.Running ->
-            if (isDark) StatusColors.runningContainerDark else StatusColors.runningContainerLight
-        TunnelPhase.Stopped ->
-            if (isDark) StatusColors.stoppedContainerDark else StatusColors.stoppedContainerLight
+        // The reference card defers to the theme's container role while dynamic colour is on, and
+        // only uses the fixed green/amber/red pair otherwise. Keeping it that way means the card
+        // belongs to the palette instead of fighting it.
+        TunnelPhase.Running -> when {
+            isDynamicColor -> MiuixTheme.colorScheme.secondaryContainer
+            isDark -> StatusColors.runningContainerDark
+            else -> StatusColors.runningContainerLight
+        }
+        TunnelPhase.Stopped -> when {
+            isDynamicColor -> MiuixTheme.colorScheme.errorContainer
+            isDark -> StatusColors.stoppedContainerDark
+            else -> StatusColors.stoppedContainerLight
+        }
         TunnelPhase.Starting,
         TunnelPhase.Stopping,
-        TunnelPhase.Confirming ->
-            if (isDark) StatusColors.busyContainerDark else StatusColors.busyContainerLight
+        TunnelPhase.Confirming -> when {
+            isDynamicColor -> MiuixTheme.colorScheme.primaryContainer
+            isDark -> StatusColors.busyContainerDark
+            else -> StatusColors.busyContainerLight
+        }
     }
 
     val targetAccent = when (state.phase) {
-        TunnelPhase.Running ->
-            if (isDark) StatusColors.runningAccentDark else StatusColors.runningAccentLight
-        TunnelPhase.Stopped ->
-            if (isDark) StatusColors.stoppedAccentDark else StatusColors.stoppedAccentLight
+        TunnelPhase.Running -> when {
+            isDynamicColor -> MiuixTheme.colorScheme.primary
+            isDark -> StatusColors.runningAccentDark
+            else -> StatusColors.runningAccentLight
+        }
+        TunnelPhase.Stopped -> when {
+            isDynamicColor -> MiuixTheme.colorScheme.error
+            isDark -> StatusColors.stoppedAccentDark
+            else -> StatusColors.stoppedAccentLight
+        }
         TunnelPhase.Starting,
         TunnelPhase.Stopping,
-        TunnelPhase.Confirming ->
-            if (isDark) StatusColors.busyAccentDark else StatusColors.busyAccentLight
+        TunnelPhase.Confirming -> when {
+            isDynamicColor -> MiuixTheme.colorScheme.primary
+            isDark -> StatusColors.busyAccentDark
+            else -> StatusColors.busyAccentLight
+        }
     }
 
     val container by animateColorAsState(
@@ -299,17 +321,17 @@ private fun StatusCard(state: TunnelUiState) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .heightIn(min = 180.dp),
+                .heightIn(min = 128.dp),
         ) {
             Box(
                 modifier = Modifier
                     .matchParentSize()
-                    .offset(38.dp, 16.dp),
+                    .offset(42.dp, 22.dp),
                 contentAlignment = Alignment.BottomEnd,
             ) {
                 Icon(
                     modifier = Modifier
-                        .size(148.dp)
+                        .size(124.dp)
                         .rotate(rotation),
                     imageVector = glyph,
                     tint = accent.copy(alpha = 0.8f),
@@ -320,7 +342,7 @@ private fun StatusCard(state: TunnelUiState) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 22.dp, vertical = 22.dp),
+                    .padding(horizontal = 22.dp, vertical = 18.dp),
                 verticalArrangement = Arrangement.Center,
             ) {
                 Text(
@@ -333,7 +355,7 @@ private fun StatusCard(state: TunnelUiState) {
                             TunnelPhase.Confirming -> R.string.status_waiting_permission
                         },
                     ),
-                    fontSize = 24.sp,
+                    fontSize = 20.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = MiuixTheme.colorScheme.onSurface,
                 )
