@@ -9,6 +9,15 @@
         android:name="android.hardware.touchscreen"
         android:required="false" />
 
+    <!--
+        `miuix-blur-android` declares minSdk 33 because render effects are API 33+. Overriding the
+        check is safe here only because every entry point into that code is guarded at runtime by
+        `isOs4PlatformSupported` (SDK >= 33 && isRenderEffectSupported()), which leaves OS3 as the
+        presentation on older devices. `miuix-glass-android` already declares 24, so it is not
+        listed.
+    -->
+    <uses-sdk tools:overrideLibrary="top.yukonga.miuix.kmp.blur" />
+
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission
