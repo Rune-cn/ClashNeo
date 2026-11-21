@@ -315,4 +315,6 @@
     <string name="profile_import_failed">Failed to import the profile</string>
     <string name="override_load_failed">Could not read the core override</string>
     <string name="override_save_failed">Could not save the core override</string>
+    <string name="logs_deleted">Log files deleted</string>
+    <string name="logs_delete_failed">Could not delete the log files</string>
 </resources>

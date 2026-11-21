@@ -111,6 +111,7 @@ import io.github.neo.clash.ui.page.logcat.LogcatLineUi
 import io.github.neo.clash.ui.page.logcat.LogcatPage
 import io.github.neo.clash.ui.page.logcat.LogcatUiState
 import io.github.neo.clash.service.model.Profile
+import io.github.neo.clash.ui.store.ThemeStore
 import io.github.neo.clash.ui.theme.ClashNeoTheme
 import io.github.neo.clash.ui.theme.getMiuixAppBarColor
 import io.github.neo.clash.ui.theme.miuixBlurEffect
@@ -213,7 +214,7 @@ class ClashNeoComposeActivity : ComponentActivity() {
         setContent {
             // Hoisted above ClashNeoTheme: the theme has to be able to read the settings that it
             // is about to apply, so the state cannot live inside the themed subtree.
-            var themeState by remember { mutableStateOf(ThemeUiState()) }
+            var themeState by remember { mutableStateOf(loadThemeState()) }
             // Hoisted here (not inside the sub-page) so the switches keep their values when the
             // user navigates back to the tabs and returns.
             var networkState by remember { mutableStateOf(loadNetworkState()) }
@@ -255,7 +256,10 @@ class ClashNeoComposeActivity : ComponentActivity() {
                     onRequireRecreate = { recreate() },
                     onHideIconChange = { hidden -> setLauncherIconVisible(!hidden) },
                     onPickProfileFile = { pickProfileFile.launch(arrayOf("*/*")) },
-                    onThemeStateChange = { themeState = it },
+                    onThemeStateChange = {
+                        themeState = it
+                        persistThemeState(it)
+                    },
                 )
             }
         }
@@ -266,6 +270,18 @@ class ClashNeoComposeActivity : ComponentActivity() {
         // The service is started from outside this screen too (quick settings tile), so the state
         // is re-read on every appearance rather than trusting what was last rendered.
         controller.refreshAll()
+    }
+
+    /**
+     * Theme settings persist across launches.
+     *
+     * Without this the whole theme screen was decorative on restart: the palette, OS version and
+     * predictive-back style all fell back to defaults on every cold start.
+     */
+    private fun loadThemeState(): ThemeUiState = ThemeStore(this).load()
+
+    private fun persistThemeState(state: ThemeUiState) {
+        ThemeStore(this).save(state)
     }
 
     /**
@@ -713,6 +729,7 @@ private fun ClashNeoApp(
                         modifier = Modifier.fillMaxSize(),
                         onBack = popBack,
                         onOpenLive = { navigateTo(Route.Logcat) },
+                        onDeleteAll = controller::deleteAllLogs,
                     )
                 }
 

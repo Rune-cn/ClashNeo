@@ -624,6 +624,25 @@ class ClashUiController(
      * `ProfilesDesign.requestSave`.
      */
     /**
+     * Deletes every saved log file.
+     *
+     * The delete row on the log screen had no handler at all, so tapping it did nothing. The log
+     * service recreates the directory on its next write, so removing it wholesale is safe.
+     */
+    fun deleteAllLogs() {
+        scope.launch {
+            val deleted = runCatching { context.logsDir.deleteRecursively() }
+            refreshLogs()
+
+            if (deleted.getOrDefault(false) || deleted.isSuccess) {
+                postMessage(context.getString(R.string.logs_deleted))
+            } else {
+                postMessage(context.getString(R.string.logs_delete_failed), isError = true)
+            }
+        }
+    }
+
+    /**
      * Loads the installed-app list plus the persisted selection.
      *
      * The list comes from `PackageManager` (the manifest already holds `QUERY_ALL_PACKAGES`), and the

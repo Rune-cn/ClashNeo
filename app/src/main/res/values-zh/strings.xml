@@ -308,4 +308,6 @@
     <string name="profile_import_failed">导入配置失败</string>
     <string name="override_load_failed">无法读取内核覆写配置</string>
     <string name="override_save_failed">无法保存内核覆写配置</string>
+    <string name="logs_deleted">日志文件已删除</string>
+    <string name="logs_delete_failed">无法删除日志文件</string>
 </resources>
