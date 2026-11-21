@@ -123,7 +123,7 @@
     <string name="message_import_first">此設定檔尚未匯入</string>
     <string name="message_proxy_not_selectable">此代理群組無法切換</string>
     <string name="message_profile_updated">設定檔 %s 更新完成</string>
-    <string name="message_profile_update_failed">設定檔 %s 更新失敗：%s</string>
+    <string name="message_profile_update_failed">設定檔 %1$s 更新失敗：%2$s</string>
 
     <string name="about_projects">專案</string>
     <string name="about_credits">致謝</string>

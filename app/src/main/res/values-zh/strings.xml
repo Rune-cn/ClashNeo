@@ -134,7 +134,7 @@
     <string name="message_import_first">该配置尚未导入</string>
     <string name="message_proxy_not_selectable">该代理组无法切换</string>
     <string name="message_profile_updated">配置 %s 更新完成</string>
-    <string name="message_profile_update_failed">配置 %s 更新失败：%s</string>
+    <string name="message_profile_update_failed">配置 %1$s 更新失败：%2$s</string>
 
     <!-- About screen. -->
     <string name="about_projects">项目</string>

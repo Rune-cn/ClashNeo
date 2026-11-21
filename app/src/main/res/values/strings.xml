@@ -141,7 +141,7 @@
     <string name="message_import_first">This profile has not been imported yet</string>
     <string name="message_proxy_not_selectable">This group cannot be changed</string>
     <string name="message_profile_updated">Update of %s completed</string>
-    <string name="message_profile_update_failed">Update of %s failed: %s</string>
+    <string name="message_profile_update_failed">Update of %1$s failed: %2$s</string>
 
     <!-- About screen. -->
     <string name="about_projects">Projects</string>
