@@ -289,4 +289,10 @@
     <string name="start_logcat">实时日志</string>
     <string name="start_logcat_summary">实时查看运行中的日志</string>
     <string name="no_logs">还没有保存的日志</string>
+    <string name="no_providers">未载入提供者</string>
+    <string name="update_all_summary">刷新所有远程提供者</string>
+    <string name="updating">正在更新…</string>
+    <string name="empty_directory">此目录为空</string>
+    <string name="directory">目录</string>
+    <string name="from_other_apps">从其他应用</string>
 </resources>

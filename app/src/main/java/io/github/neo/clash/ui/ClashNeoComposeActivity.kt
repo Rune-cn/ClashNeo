@@ -68,6 +68,18 @@ import io.github.neo.clash.ui.page.appsettings.AppSettingsPage
 import io.github.neo.clash.ui.page.appsettings.AppSettingsUiState
 import io.github.neo.clash.ui.page.control.ControlPage
 import io.github.neo.clash.ui.page.profiles.ProfilesPage
+
+import io.github.neo.clash.ui.page.files.FileEntryUi
+import io.github.neo.clash.ui.page.files.FilesPage
+import io.github.neo.clash.ui.page.files.FilesUiState
+import io.github.neo.clash.ui.page.logs.LogsPage
+import io.github.neo.clash.ui.page.logs.LogsUiState
+import io.github.neo.clash.ui.page.newprofile.NewProfilePage
+import io.github.neo.clash.ui.page.newprofile.NewProfileUiState
+import io.github.neo.clash.ui.page.properties.PropertiesPage
+import io.github.neo.clash.ui.page.properties.PropertiesUiState
+import io.github.neo.clash.ui.page.providers.ProvidersPage
+import io.github.neo.clash.ui.page.providers.ProvidersUiState
 import io.github.neo.clash.ui.page.proxy.ProxyPage
 import io.github.neo.clash.ui.page.settings.SettingsPage
 import io.github.neo.clash.ui.page.settings.SettingsRoute
@@ -179,6 +191,10 @@ class ClashNeoComposeActivity : ComponentActivity() {
             var accessState by remember { mutableStateOf(AccessControlUiState()) }
             var overrideState by remember { mutableStateOf(OverrideSettingsUiState()) }
             var appSettingsState by remember { mutableStateOf(AppSettingsUiState()) }
+            var propertiesState by remember { mutableStateOf(PropertiesUiState()) }
+            var logsState by remember { mutableStateOf(LogsUiState()) }
+            var providersState by remember { mutableStateOf(ProvidersUiState()) }
+            var filesState by remember { mutableStateOf(FilesUiState()) }
 
             ClashNeoTheme(
                 themeMode = themeState.themeMode,
@@ -201,6 +217,11 @@ class ClashNeoComposeActivity : ComponentActivity() {
                     onOverrideStateChange = { overrideState = it },
                     appSettingsState = appSettingsState,
                     onAppSettingsStateChange = { appSettingsState = it },
+                    propertiesState = propertiesState,
+                    onPropertiesStateChange = { propertiesState = it },
+                    logsState = logsState,
+                    providersState = providersState,
+                    filesState = filesState,
                     onRequireRecreate = { recreate() },
                     onHideIconChange = { hidden -> setLauncherIconVisible(!hidden) },
                     onThemeStateChange = { themeState = it },
@@ -284,6 +305,11 @@ private fun ClashNeoApp(
     onOverrideStateChange: (OverrideSettingsUiState) -> Unit,
     appSettingsState: AppSettingsUiState,
     onAppSettingsStateChange: (AppSettingsUiState) -> Unit,
+    propertiesState: PropertiesUiState,
+    onPropertiesStateChange: (PropertiesUiState) -> Unit,
+    logsState: LogsUiState,
+    providersState: ProvidersUiState,
+    filesState: FilesUiState,
     onRequireRecreate: () -> Unit,
     onHideIconChange: (Boolean) -> Unit,
     onOpenLogs: () -> Unit,
@@ -531,6 +557,49 @@ private fun ClashNeoApp(
                         onBack = popBack,
                         onRequireRecreate = onRequireRecreate,
                         onHideIconChange = onHideIconChange,
+                    )
+                }
+
+                entry<Route.Properties>(swipeDismiss = swipeDirection) {
+                    PropertiesPage(
+                        state = propertiesState,
+                        onStateChange = onPropertiesStateChange,
+                        modifier = Modifier.fillMaxSize(),
+                        onBack = popBack,
+                        onCommit = { onPropertiesStateChange(propertiesState.copy(dirty = false)) },
+                    )
+                }
+
+                entry<Route.Logs>(swipeDismiss = swipeDirection) {
+                    LogsPage(
+                        state = logsState,
+                        modifier = Modifier.fillMaxSize(),
+                        onBack = popBack,
+                        onOpenLive = { navigateTo(Route.Logcat) },
+                    )
+                }
+
+                entry<Route.Providers>(swipeDismiss = swipeDirection) {
+                    ProvidersPage(
+                        state = providersState,
+                        modifier = Modifier.fillMaxSize(),
+                        onBack = popBack,
+                    )
+                }
+
+                entry<Route.Files>(swipeDismiss = swipeDirection) {
+                    FilesPage(
+                        state = filesState,
+                        modifier = Modifier.fillMaxSize(),
+                        onBack = popBack,
+                    )
+                }
+
+                entry<Route.NewProfile>(swipeDismiss = swipeDirection) {
+                    NewProfilePage(
+                        state = NewProfileUiState(),
+                        modifier = Modifier.fillMaxSize(),
+                        onBack = popBack,
                     )
                 }
 

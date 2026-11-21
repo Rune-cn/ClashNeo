@@ -39,4 +39,22 @@ sealed interface Route : NavKey {
     /** @param uuid identifies which profile is being edited. */
     @Serializable
     data class Properties(val uuid: String) : Route
+
+    @Serializable
+    data object Providers : Route
+
+    @Serializable
+    data object Logs : Route
+
+    @Serializable
+    data object Logcat : Route
+
+    @Serializable
+    data object NewProfile : Route
+
+    @Serializable
+    data object Files : Route
+
+    @Serializable
+    data object MetaFeatures : Route
 }

@@ -270,4 +270,10 @@
     <string name="start_logcat">即時日誌</string>
     <string name="start_logcat_summary">即時檢視執行中的日誌</string>
     <string name="no_logs">還沒有儲存的日誌</string>
+    <string name="no_providers">未載入提供者</string>
+    <string name="update_all_summary">重新整理所有遠端提供者</string>
+    <string name="updating">正在更新…</string>
+    <string name="empty_directory">此目錄為空</string>
+    <string name="directory">目錄</string>
+    <string name="from_other_apps">從其他應用程式</string>
 </resources>
