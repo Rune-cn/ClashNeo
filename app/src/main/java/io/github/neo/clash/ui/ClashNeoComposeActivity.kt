@@ -71,6 +71,17 @@ import io.github.neo.clash.ui.page.settings.SettingsUiState
 import io.github.neo.clash.ui.page.theme.ThemeSettingsPage
 import io.github.neo.clash.ui.page.theme.ThemeMode
 import io.github.neo.clash.ui.page.theme.ThemeUiState
+
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.unit.LayoutDirection
+import io.github.neo.clash.ui.animation.predictiveback.appNavTransition
+import io.github.neo.clash.ui.navigation.Route
+import io.github.neo.clash.ui.page.theme.PredictiveBackAnimation
+import top.yukonga.miuix.kmp.nav.core.NavCornerClipMode
+import top.yukonga.miuix.kmp.nav.core.NavDisplay
+import top.yukonga.miuix.kmp.nav.core.NavDisplayEffects
+import top.yukonga.miuix.kmp.nav.transition.NavSwipeDirection
+import top.yukonga.miuix.kmp.nav.core.rememberNavBackStack
 import io.github.neo.clash.ui.theme.ClashNeoTheme
 
 import androidx.compose.foundation.background
@@ -215,16 +226,6 @@ class ClashNeoComposeActivity : ComponentActivity() {
  * forces a branch in the `when` below instead of silently rendering nothing. The label is a
  * resource id, not a literal, so the tab bar follows the device language.
  */
-/** Sub-pages layered above the tab pager. */
-private enum class SubPage {
-    None,
-    About,
-    Theme,
-    Network,
-    AccessControl,
-    Override,
-}
-
 private enum class Tab(val labelRes: Int, val icon: ImageVector) {
     Control(R.string.tab_control, Icons.Rounded.Dashboard),
     Proxy(R.string.tab_proxy, Icons.Rounded.Dns),
@@ -255,12 +256,6 @@ private fun ClashNeoApp(
 ) {
     val pagerState = rememberPagerState(pageCount = { Tab.entries.size })
     val scope = rememberCoroutineScope()
-    // Sub-pages that live above the tabs. An enum (not a boolean per page) keeps the back/return
-    // behaviour identical for every one of them.
-    var subPage by remember { mutableStateOf(SubPage.None) }
-    // 0f = at rest, 1f = fully swiped away. Driven by the predictive-back gesture.
-    var subPageProgress by remember { mutableFloatStateOf(0f) }
-
     val snackbarHostState = remember { SnackbarHostState() }
 
     val tunnel by controller.tunnel.collectAsStateWithLifecycle()
@@ -290,56 +285,24 @@ private fun ClashNeoApp(
         }
     }
 
-    // Back stack, innermost first:
-    //   1. an open sub-page (About/Theme/Network/…) closes — with a scale/fade preview while the
-    //      gesture is in progress,
-    //   2. otherwise a non-first tab scrubs back to the first tab, following the finger,
-    //   3. otherwise the handler is disabled and the system finishes the activity.
-    //
-    // `PredictiveBackHandler` (not `BackHandler`) is what makes the gesture visible: the system
-    // reports progress 0f→1f, and the UI is expected to move *with* it. A plain BackHandler only
-    // fires at the end, which is why no predictive animation was ever seen.
-    if (subPage != SubPage.None) {
-        PredictiveBackHandler { progress ->
-            try {
-                progress.collect { backEvent ->
-                    // Drive the outgoing sub-page off its own edge as the finger travels.
-                    subPageProgress = backEvent.progress
-                }
-                // Gesture completed: commit the pop.
-                subPageProgress = 0f
-                subPage = SubPage.None
-            } catch (e: CancellationException) {
-                // Gesture cancelled: the page springs back to rest.
-                subPageProgress = 0f
-                throw e
-            }
-        }
-    } else if (pagerState.currentPage != 0) {
-        PredictiveBackHandler { progress ->
-            try {
-                progress.collect { backEvent ->
-                    // Scrub the pager by gesture progress so the previous tab slides in under the
-                    // finger instead of jumping at the end.
-                    pagerState.scrollToPage(
-                        page = 0,
-                        pageOffsetFraction = 1f - backEvent.progress,
-                    )
-                }
-                pagerState.animateScrollToPage(0)
-            } catch (e: CancellationException) {
-                // Settle on the page the gesture started from.
-                pagerState.animateScrollToPage(pagerState.currentPage)
-                throw e
-            }
-        }
+    // The back stack is the single owner of "where am I". `NavDisplay` reads its depth and decides
+    // whether to drive the predictive-back gesture itself; it is deliberately the *only* back
+    // handler in the screen. An entry-level `BackHandler`/`PredictiveBackHandler` would consume the
+    // gesture first and leave nothing to preview — that is exactly why the previous hand-written
+    // handler produced no animation on some pages and a plain slide on others.
+    val backStack = rememberNavBackStack(Route.Main)
+
+    val navigateTo: (Route) -> Unit = { route ->
+        if (backStack.lastOrNull() != route) backStack.add(route)
+    }
+    val popBack: () -> Unit = {
+        if (backStack.size > 1) backStack.removeAt(backStack.lastIndex)
     }
 
     // Mirrors the reference decision order exactly:
     //   - OS4 always floats (its glass pill *is* the OS4 navigation affordance),
     //   - OS3 floats only when the preference says so,
-    //   - the blur mode degrades by API level rather than by preference, because LiquidGlass needs
-    //     render effects (33+) and plain Blur needs the blur path below that.
+    //   - the blur mode degrades by API level rather than by preference.
     val floatingBar = themeState.useMiuixOs4 || themeState.useAppleFloatingBar
     val floatingMode = when {
         themeState.useBlur && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU ->
@@ -348,196 +311,192 @@ private fun ClashNeoApp(
         else -> FloatingBottomBarMode.None
     }
 
-    // Two distinct backdrops, as in the reference:
-    //   floatingBackdrop records the whole page so the pill can refract it;
-    //   miuixBackdrop is the OS3 blur surface and is null when blur is off.
     val floatingBackdrop = rememberLayerBackdrop()
     val miuixBackdrop = rememberMiuixBlurBackdrop(themeState.useBlur)
 
-    // Labels must be resolved inside a composable, so the item list is rebuilt when the locale
-    // changes rather than captured once.
     val topLevelItems = Tab.entries.map { tab ->
         NavigationItem(label = stringResource(tab.labelRes), icon = tab.icon)
     }
 
+    val transition = remember(themeState.predictiveBackAnimation, themeState.predictiveBackExitDirection) {
+        appNavTransition(
+            animation = themeState.predictiveBackAnimation,
+            exitDirection = themeState.predictiveBackExitDirection,
+        )
+    }
+
+    // Resolved once: `NavEntryBuilder.entry` takes a plain value, so calling a @Composable
+    // helper inside each `entry { }` lambda is not allowed.
+    val swipeDirection = when (LocalLayoutDirection.current) {
+        LayoutDirection.Rtl -> NavSwipeDirection.RightToLeft
+        LayoutDirection.Ltr -> NavSwipeDirection.LeftToRight
+    }
+
+    val navCornerRadius = 32.dp
+    val roundAllCorners = themeState.predictiveBackAnimation == PredictiveBackAnimation.AOSP ||
+        themeState.predictiveBackAnimation == PredictiveBackAnimation.SCALE ||
+        themeState.predictiveBackAnimation == PredictiveBackAnimation.CLASSIC
+    val effects = remember(navCornerRadius, roundAllCorners) {
+        NavDisplayEffects(
+            enableCornerClip = true,
+            cornerClipRadius = navCornerRadius,
+            cornerClipMode = if (roundAllCorners) NavCornerClipMode.All else NavCornerClipMode.Leading,
+            dimAmount = 0.5f,
+            backdropColor = Color.Unspecified,
+            // Letting input through mid-gesture avoids the "stuck" feel when the finger pauses.
+            blockInputDuringTransition = false,
+        )
+    }
+
     MiuixComponentHost(
-        useOs4 = false,
+        useOs4 = themeState.useMiuixOs4,
         useBlur = themeState.useBlur,
     ) { scopeState ->
         Scaffold(
             bottomBar = {
-                MiuixBottomBar(
-                    selected = pagerState.currentPage,
-                    items = topLevelItems,
-                    floating = floatingBar,
-                    floatingMode = floatingMode,
-                    floatingBackdrop = floatingBackdrop,
-                    miuixBackdrop = miuixBackdrop,
-                    onSelect = { index ->
-                        subPage = SubPage.None
-                        scope.launch { pagerState.animateScrollToPage(index) }
-                    },
-                )
+                // The bar is only drawn on the root destination: a full-bleed sub-page hides it so
+                // the page owns the whole surface, matching the reference layout.
+                if (backStack.size == 1) {
+                    MiuixBottomBar(
+                        selected = pagerState.currentPage,
+                        items = topLevelItems,
+                        floating = floatingBar,
+                        floatingMode = floatingMode,
+                        floatingBackdrop = floatingBackdrop,
+                        miuixBackdrop = miuixBackdrop,
+                        onSelect = { index ->
+                            scope.launch { pagerState.animateScrollToPage(index) }
+                        },
+                    )
+                }
             },
             snackbarHost = { SnackbarHost(snackbarHostState) },
-            containerColor = androidx.compose.ui.graphics.Color.Transparent,
+            containerColor = Color.Transparent,
         ) { padding ->
-            // Shared predictive-back transform for every sub-page. `subPageProgress` is driven by
-            // the gesture, so the page tracks the finger rather than waiting for the release.
-            val subPageModifier = Modifier
-                .fillMaxSize()
-                .graphicsLayer {
-                    val p = subPageProgress.coerceIn(0f, 1f)
-                    translationX = size.width * 0.18f * p
-                    scaleX = 1f - 0.12f * p
-                    scaleY = 1f - 0.12f * p
-                    alpha = 1f - p
-                    clip = false
+            val bottomInset = padding.calculateBottomPadding()
+
+            NavDisplay(
+                backStack = backStack,
+                onBack = { popBack() },
+                transition = transition,
+                effects = effects,
+            ) {
+                entry<Route.Main> {
+                    HorizontalPager(
+                        state = pagerState,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .then(
+                                if (floatingBar) Modifier.layerBackdrop(floatingBackdrop)
+                                else miuixBackdrop?.let { Modifier.layerBackdrop(it) } ?: Modifier,
+                            ),
+                        contentPadding = PaddingValues(),
+                        beyondViewportPageCount = 1,
+                        overscrollEffect = null,
+                    ) { page ->
+                        Box(modifier = Modifier.fillMaxSize()) {
+                            when (Tab.entries[page]) {
+                                Tab.Control -> ControlPage(
+                                    state = tunnel,
+                                    modifier = Modifier.fillMaxSize(),
+                                    outerPadding = PaddingValues(bottom = bottomInset),
+                                    onToggle = controller::toggleTunnel,
+                                    onRefresh = controller::refreshAll,
+                                    onOpenLogs = onOpenLogs,
+                                    onOpenNetworkSettings = { navigateTo(Route.Network) },
+                                )
+
+                                Tab.Proxy -> ProxyPage(
+                                    state = proxies,
+                                    modifier = Modifier.fillMaxSize(),
+                                    outerPadding = PaddingValues(bottom = bottomInset),
+                                    onSelect = controller::selectProxy,
+                                )
+
+                                Tab.Profiles -> ProfilesPage(
+                                    state = profiles,
+                                    modifier = Modifier.fillMaxSize(),
+                                    outerPadding = PaddingValues(bottom = bottomInset),
+                                    onActivate = controller::activateProfile,
+                                )
+
+                                Tab.Settings -> SettingsPage(
+                                    state = SettingsUiState(),
+                                    modifier = Modifier.fillMaxSize(),
+                                    outerPadding = PaddingValues(bottom = bottomInset),
+                                    onNavigate = { route ->
+                                        when (route) {
+                                            SettingsRoute.About -> navigateTo(Route.About)
+                                            SettingsRoute.Theme -> navigateTo(Route.Theme)
+                                            SettingsRoute.Network -> navigateTo(Route.Network)
+                                            SettingsRoute.AccessControl -> navigateTo(Route.AccessControl)
+                                            SettingsRoute.Override -> navigateTo(Route.Override)
+                                            else -> context.startActivity(
+                                                SettingsActivity::class.intent,
+                                            )
+                                        }
+                                    },
+                                )
+                            }
+                        }
+                    }
                 }
 
-            when (subPage) {
-                SubPage.About -> {
+                entry<Route.About>(swipeDismiss = swipeDirection) {
                     AboutPage(
                         state = AboutUiState(
                             appName = stringResource(R.string.app_display_name),
                             versionName = BuildConfig.VERSION_NAME,
                             versionCode = BuildConfig.VERSION_CODE,
                         ),
-                        modifier = subPageModifier,
-                        outerPadding = PaddingValues(bottom = padding.calculateBottomPadding()),
-                        onBack = { subPage = SubPage.None },
+                        modifier = Modifier.fillMaxSize(),
+                        onBack = popBack,
                     )
-                    return@Scaffold
                 }
 
-                SubPage.Theme -> {
+                entry<Route.Theme>(swipeDismiss = swipeDirection) {
                     ThemeSettingsPage(
                         state = themeState,
                         onStateChange = onThemeStateChange,
-                        modifier = subPageModifier,
-                        outerPadding = PaddingValues(bottom = padding.calculateBottomPadding()),
-                        onBack = { subPage = SubPage.None },
+                        modifier = Modifier.fillMaxSize(),
+                        onBack = popBack,
                     )
-                    return@Scaffold
                 }
 
-                SubPage.Network -> {
+                entry<Route.Network>(swipeDismiss = swipeDirection) {
                     NetworkSettingsPage(
                         state = networkState,
                         onStateChange = onNetworkStateChange,
-                        modifier = subPageModifier,
-                        outerPadding = PaddingValues(bottom = padding.calculateBottomPadding()),
-                        onBack = { subPage = SubPage.None },
-                        onOpenAccessControl = { subPage = SubPage.AccessControl },
+                        modifier = Modifier.fillMaxSize(),
+                        onBack = popBack,
+                        onOpenAccessControl = { navigateTo(Route.AccessControl) },
                     )
-                    return@Scaffold
                 }
 
-                SubPage.AccessControl -> {
+                entry<Route.AccessControl>(swipeDismiss = swipeDirection) {
                     AccessControlPage(
                         state = accessState,
                         onStateChange = onAccessStateChange,
-                        modifier = subPageModifier,
-                        outerPadding = PaddingValues(bottom = padding.calculateBottomPadding()),
-                        onBack = { subPage = SubPage.None },
+                        modifier = Modifier.fillMaxSize(),
+                        onBack = popBack,
                     )
-                    return@Scaffold
                 }
 
-                SubPage.Override -> {
+                entry<Route.Override>(swipeDismiss = swipeDirection) {
                     OverrideSettingsPage(
                         state = overrideState,
                         onStateChange = onOverrideStateChange,
-                        // The core owns these vocabularies; they are passed in rather than
-                        // duplicated here so a core change does not silently desync the pickers.
                         logLevels = listOf("info", "warning", "error", "debug", "silent"),
                         modes = listOf("rule", "global", "direct"),
-                        modifier = subPageModifier,
-                        outerPadding = PaddingValues(bottom = padding.calculateBottomPadding()),
-                        onBack = { subPage = SubPage.None },
+                        modifier = Modifier.fillMaxSize(),
+                        onBack = popBack,
                     )
-                    return@Scaffold
-                }
-
-                SubPage.None -> Unit
-            }
-
-            HorizontalPager(
-                state = pagerState,
-                // Exactly one backdrop is attached, and which one depends on the bar style:
-                // a floating pill refracts the *whole* page, so the page must be the recorded
-                // subtree; a flush bar only blurs the strip behind itself. Attaching both (or the
-                // host's generic backdrop) is what made blur invisible: the sampler and the
-                // recorded content ended up on the same or unrelated nodes.
-                modifier = Modifier
-                    .fillMaxSize()
-                    .then(
-                        if (floatingBar) Modifier.layerBackdrop(floatingBackdrop)
-                        else miuixBackdrop?.let { Modifier.layerBackdrop(it) } ?: Modifier,
-                    ),
-                // No content padding here: each page receives the bottom inset as `outerPadding`
-                // and appends it to its own scroll content padding. Doing both counted the bar
-                // height twice and left a dead gap at the end of every list.
-                contentPadding = PaddingValues(),
-                beyondViewportPageCount = 1,
-                overscrollEffect = null,
-            ) { page ->
-                // No page transform: the reference pager is a plain tracking strip, so the tabs
-                // read as siblings in one continuous surface. The earlier scale-down made the
-                // switch feel like a stack of cards instead.
-                val pageOuterPadding = PaddingValues(
-                    bottom = padding.calculateBottomPadding(),
-                )
-
-                Box(modifier = Modifier.fillMaxSize()) {
-                    when (Tab.entries[page]) {
-                        Tab.Control -> ControlPage(
-                            state = tunnel,
-                            modifier = Modifier.fillMaxSize(),
-                            outerPadding = pageOuterPadding,
-                            onToggle = controller::toggleTunnel,
-                            onRefresh = controller::refreshAll,
-                            onOpenLogs = onOpenLogs,
-                            onOpenNetworkSettings = { subPage = SubPage.Network },
-                        )
-
-                        Tab.Proxy -> ProxyPage(
-                            state = proxies,
-                            modifier = Modifier.fillMaxSize(),
-                            outerPadding = pageOuterPadding,
-                            onSelect = controller::selectProxy,
-                        )
-
-                        Tab.Profiles -> ProfilesPage(
-                            state = profiles,
-                            modifier = Modifier.fillMaxSize(),
-                            outerPadding = pageOuterPadding,
-                            onActivate = controller::activateProfile,
-                        )
-
-                        Tab.Settings -> SettingsPage(
-                            state = SettingsUiState(),
-                            modifier = Modifier.fillMaxSize(),
-                            outerPadding = pageOuterPadding,
-                            onNavigate = { route ->
-                                when (route) {
-                                    SettingsRoute.About -> subPage = SubPage.About
-                                    SettingsRoute.Theme -> subPage = SubPage.Theme
-                                    SettingsRoute.Network -> subPage = SubPage.Network
-                                    SettingsRoute.AccessControl ->
-                                        subPage = SubPage.AccessControl
-                                    SettingsRoute.Override -> subPage = SubPage.Override
-                                    else ->
-                                        context.startActivity(SettingsActivity::class.intent)
-                                }
-                            },
-                        )
-                    }
                 }
             }
         }
     }
 }
+
 
 /**
  * Resolve a [ThemeMode] to the boolean the theme composable wants.

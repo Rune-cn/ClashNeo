@@ -19,6 +19,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 import io.github.neo.clash.R
 import io.github.neo.clash.service.model.Profile
@@ -47,22 +48,28 @@ fun ProfilesPage(
     onActivate: (Profile) -> Unit,
 ) {
     when {
-        state.error != null -> MessageState(
+        state.error != null -> MessageScreen(
+            pageTitle = stringResource(R.string.tab_profiles),
             title = stringResource(R.string.profiles_unavailable),
             body = state.error,
-            modifier = modifier.fillMaxSize(),
+            modifier = modifier,
+            outerPadding = outerPadding,
         )
 
-        state.profiles.isEmpty() && state.loading -> MessageState(
+        state.profiles.isEmpty() && state.loading -> MessageScreen(
+            pageTitle = stringResource(R.string.tab_profiles),
             title = stringResource(R.string.profiles_loading),
             body = stringResource(R.string.profiles_loading_body),
-            modifier = modifier.fillMaxSize(),
+            modifier = modifier,
+            outerPadding = outerPadding,
         )
 
-        state.profiles.isEmpty() -> MessageState(
+        state.profiles.isEmpty() -> MessageScreen(
+            pageTitle = stringResource(R.string.tab_profiles),
             title = stringResource(R.string.profiles_empty),
             body = stringResource(R.string.profiles_empty_body),
-            modifier = modifier.fillMaxSize(),
+            modifier = modifier,
+            outerPadding = outerPadding,
         )
 
         else -> MiuixPageScaffold(
@@ -148,29 +155,43 @@ private fun ActiveMark() {
 }
 
 @Composable
-private fun MessageState(
+private fun MessageScreen(
+    pageTitle: String,
     title: String,
     body: String,
     modifier: Modifier = Modifier,
+    outerPadding: PaddingValues = PaddingValues(),
 ) {
-    Box(modifier = modifier, contentAlignment = Alignment.Center) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 32.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            Text(
-                text = title,
-                fontSize = 17.sp,
-                color = MiuixTheme.colorScheme.onSurface,
-            )
-            Text(
-                text = body,
-                fontSize = 14.sp,
-                color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
-            )
+    MiuixPageScaffold(
+        title = pageTitle,
+        modifier = modifier,
+        outerPadding = outerPadding,
+    ) {
+        item {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 32.dp, vertical = 48.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    Text(
+                        text = title,
+                        fontSize = 17.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MiuixTheme.colorScheme.onSurface,
+                    )
+                    Text(
+                        text = body,
+                        fontSize = 14.sp,
+                        color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                    )
+                }
+            }
         }
     }
 }

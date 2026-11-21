@@ -48,22 +48,30 @@ fun ProxyPage(
     onSelect: (group: String, node: String) -> Unit,
 ) {
     when {
-        state.error != null -> MessageState(
+        // Every branch renders through the scaffold so the title bar is always present: an error
+        // or an empty list is still that screen, not a different one.
+        state.error != null -> MessageScreen(
+            pageTitle = stringResource(R.string.tab_proxy),
             title = stringResource(R.string.proxy_unavailable),
             body = state.error,
-            modifier = modifier.fillMaxSize(),
+            modifier = modifier,
+            outerPadding = outerPadding,
         )
 
-        state.isEmpty && state.loading -> MessageState(
+        state.isEmpty && state.loading -> MessageScreen(
+            pageTitle = stringResource(R.string.tab_proxy),
             title = stringResource(R.string.proxy_loading),
             body = stringResource(R.string.proxy_loading_body),
-            modifier = modifier.fillMaxSize(),
+            modifier = modifier,
+            outerPadding = outerPadding,
         )
 
-        state.isEmpty -> MessageState(
+        state.isEmpty -> MessageScreen(
+            pageTitle = stringResource(R.string.tab_proxy),
             title = stringResource(R.string.proxy_empty),
             body = stringResource(R.string.proxy_empty_body),
-            modifier = modifier.fillMaxSize(),
+            modifier = modifier,
+            outerPadding = outerPadding,
         )
 
         else -> MiuixPageScaffold(
@@ -154,30 +162,43 @@ private fun SelectedMark() {
  * callers to pass strings that no longer match the situation.
  */
 @Composable
-private fun MessageState(
+private fun MessageScreen(
+    pageTitle: String,
     title: String,
     body: String,
     modifier: Modifier = Modifier,
+    outerPadding: PaddingValues = PaddingValues(),
 ) {
-    Box(modifier = modifier, contentAlignment = Alignment.Center) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 32.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            Text(
-                text = title,
-                fontSize = 17.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = MiuixTheme.colorScheme.onSurface,
-            )
-            Text(
-                text = body,
-                fontSize = 14.sp,
-                color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
-            )
+    MiuixPageScaffold(
+        title = pageTitle,
+        modifier = modifier,
+        outerPadding = outerPadding,
+    ) {
+        item {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 32.dp, vertical = 48.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    Text(
+                        text = title,
+                        fontSize = 17.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MiuixTheme.colorScheme.onSurface,
+                    )
+                    Text(
+                        text = body,
+                        fontSize = 14.sp,
+                        color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                    )
+                }
+            }
         }
     }
 }
