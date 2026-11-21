@@ -1,34 +1,44 @@
 // SPDX-License-Identifier: GPL-3.0-only
 package io.github.neo.clash.ui
 
-import android.content.Intent
-import android.net.VpnService
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.Spring
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Dashboard
-import androidx.compose.material.icons.rounded.Dns
 import androidx.compose.material.icons.rounded.Description
+import androidx.compose.material.icons.rounded.Dns
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.TextStyle
+import io.github.neo.clash.BuildConfig
+import kotlin.math.absoluteValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
-import io.github.neo.clash.LogsActivity
-import io.github.neo.clash.R
 import io.github.neo.clash.LogcatActivity
 import io.github.neo.clash.LogcatService
+import io.github.neo.clash.LogsActivity
 import io.github.neo.clash.NetworkSettingsActivity
+import io.github.neo.clash.R
 import io.github.neo.clash.SettingsActivity
 import io.github.neo.clash.common.util.intent
 import io.github.neo.clash.ui.page.about.AboutPage
@@ -40,6 +50,7 @@ import io.github.neo.clash.ui.page.settings.SettingsPage
 import io.github.neo.clash.ui.page.settings.SettingsRoute
 import io.github.neo.clash.ui.page.settings.SettingsUiState
 import io.github.neo.clash.ui.theme.ClashNeoTheme
+import io.github.neo.clash.ui.widget.MiuixComponentHost
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import top.yukonga.miuix.kmp.basic.NavigationBar
@@ -47,7 +58,6 @@ import top.yukonga.miuix.kmp.basic.NavigationBarItem
 import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.SnackbarHost
 import top.yukonga.miuix.kmp.basic.SnackbarHostState
-import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 /**
  * The application's main screen.
@@ -86,7 +96,8 @@ class ClashNeoComposeActivity : ComponentActivity() {
         lifecycleScope.launch {
             controller.messages.collectLatest { message ->
                 when (message) {
-                    is ChannelMessages.VpnPermissionRequired -> vpnPermissionLauncher.launch(message.intent)
+                    is ChannelMessages.VpnPermissionRequired ->
+                        vpnPermissionLauncher.launch(message.intent)
                     else -> Unit
                 }
             }
@@ -127,27 +138,31 @@ class ClashNeoComposeActivity : ComponentActivity() {
  * Tabs of the bottom navigation, in the order the user specified.
  *
  * An enum rather than a list of lambdas keeps the badge/selected logic exhaustive: adding a tab
- * forces a branch in the `when` below instead of silently rendering nothing.
+ * forces a branch in the `when` below instead of silently rendering nothing. The label is a
+ * resource id, not a literal, so the tab bar follows the device language.
  */
-private enum class Tab(val label: String, val icon: ImageVector) {
-    Control("控制", Icons.Rounded.Dashboard),
-    Proxy("代理", Icons.Rounded.Dns),
-    Profiles("配置", Icons.Rounded.Description),
-    Settings("设置", Icons.Rounded.Settings),
+private enum class Tab(val labelRes: Int, val icon: ImageVector) {
+    Control(R.string.tab_control, Icons.Rounded.Dashboard),
+    Proxy(R.string.tab_proxy, Icons.Rounded.Dns),
+    Profiles(R.string.tab_profiles, Icons.Rounded.Description),
+    Settings(R.string.tab_settings, Icons.Rounded.Settings),
 }
 
 /**
- * Root layout: bottom navigation plus the selected tab.
+ * Root layout: a horizontally swipeable pager plus the bottom navigation.
  *
- * State is hoisted from [ClashUiController] with `collectAsStateWithLifecycle`, so the flows stop
- * being observed while the activity is stopped and resume with the latest value on return.
+ * A pager (rather than a `when`) matches the reference UI and makes the tabs feel like siblings:
+ * swiping between them is continuous, and the back gesture can drive the pager without a special
+ * case. State is hoisted from [ClashUiController] with `collectAsStateWithLifecycle`, so the flows
+ * stop being observed while the activity is stopped and resume with the latest value on return.
  */
 @Composable
 private fun ClashNeoApp(
     controller: ClashUiController,
     onOpenLogs: () -> Unit,
 ) {
-    var selectedTab by remember { mutableStateOf(Tab.Control) }
+    val pagerState = rememberPagerState(pageCount = { Tab.entries.size })
+    val scope = rememberCoroutineScope()
     var showAbout by remember { mutableStateOf(false) }
 
     val snackbarHostState = remember { SnackbarHostState() }
@@ -156,18 +171,15 @@ private fun ClashNeoApp(
     val proxies by controller.proxies.collectAsStateWithLifecycle()
     val profiles by controller.profiles.collectAsStateWithLifecycle()
 
-    val context = androidx.compose.ui.platform.LocalContext.current
+    val context = LocalContext.current
 
     LaunchedEffect(Unit) {
         controller.messages.collectLatest { message ->
             when (message) {
-                is ChannelMessages.Text ->
-                    snackbarHostState.showSnackbar(message.text)
+                is ChannelMessages.Text -> snackbarHostState.showSnackbar(message.text)
 
                 is ChannelMessages.NeedImport ->
-                    snackbarHostState.showSnackbar(
-                        context.getString(R.string.message_import_first),
-                    )
+                    snackbarHostState.showSnackbar(context.getString(R.string.message_import_first))
 
                 is ChannelMessages.ProfileSwitched ->
                     snackbarHostState.showSnackbar(
@@ -182,72 +194,124 @@ private fun ClashNeoApp(
         }
     }
 
-    Scaffold(
-        bottomBar = {
-            NavigationBar {
-                Tab.entries.forEach { tab ->
-                    NavigationBarItem(
-                        selected = selectedTab == tab,
-                        onClick = {
-                            selectedTab = tab
-                            showAbout = false
+    val useBlur = true
+
+    MiuixComponentHost(
+        useOs4 = false,
+        useBlur = useBlur,
+    ) { scopeState ->
+        Scaffold(
+            bottomBar = {
+                MiuixBottomBar(
+                    selected = pagerState.currentPage,
+                    onSelect = { index ->
+                        showAbout = false
+                        scope.launch { pagerState.animateScrollToPage(index) }
+                    },
+                )
+            },
+            snackbarHost = { SnackbarHost(snackbarHostState) },
+            containerColor = androidx.compose.ui.graphics.Color.Transparent,
+        ) { padding ->
+            if (showAbout) {
+                AboutPage(
+                    state = AboutUiState(
+                        appName = stringResource(R.string.app_display_name),
+                        versionName = BuildConfig.VERSION_NAME,
+                        versionCode = BuildConfig.VERSION_CODE,
+                    ),
+                    modifier = Modifier.fillMaxSize(),
+                    onBack = { showAbout = false },
+                )
+                return@Scaffold
+            }
+
+            HorizontalPager(
+                state = pagerState,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .then(scopeState.contentBackdropModifier),
+                contentPadding = padding,
+                beyondViewportPageCount = 1,
+                overscrollEffect = null,
+            ) { page ->
+                // Pages scale down slightly while off-centre, which gives the swipe a sense of
+                // depth without the cost of a full page transform.
+                val offset = (pagerState.currentPage - page) + pagerState.currentPageOffsetFraction
+                val scale by animateFloatAsState(
+                    targetValue = (1f - (offset.absoluteValue / 8f)).coerceIn(0.92f, 1f),
+                    animationSpec = spring(
+                        dampingRatio = Spring.DampingRatioNoBouncy,
+                        stiffness = Spring.StiffnessMediumLow,
+                    ),
+                    label = "page-scale",
+                )
+
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .graphicsLayer {
+                            scaleX = scale
+                            scaleY = scale
                         },
-                        icon = tab.icon,
-                        label = tab.label,
-                    )
+                ) {
+                    when (Tab.entries[page]) {
+                        Tab.Control -> ControlPage(
+                            state = tunnel,
+                            modifier = Modifier.fillMaxSize(),
+                            onToggle = controller::toggleTunnel,
+                            onRefresh = controller::refreshAll,
+                            onOpenLogs = onOpenLogs,
+                            onOpenNetworkSettings = {
+                                context.startActivity(NetworkSettingsActivity::class.intent)
+                            },
+                        )
+
+                        Tab.Proxy -> ProxyPage(
+                            state = proxies,
+                            modifier = Modifier.fillMaxSize(),
+                            onSelect = controller::selectProxy,
+                        )
+
+                        Tab.Profiles -> ProfilesPage(
+                            state = profiles,
+                            modifier = Modifier.fillMaxSize(),
+                            onActivate = controller::activateProfile,
+                        )
+
+                        Tab.Settings -> SettingsPage(
+                            state = SettingsUiState(),
+                            modifier = Modifier.fillMaxSize(),
+                            onNavigate = { route ->
+                                when (route) {
+                                    SettingsRoute.About -> showAbout = true
+                                    SettingsRoute.Network ->
+                                        context.startActivity(NetworkSettingsActivity::class.intent)
+                                    else ->
+                                        context.startActivity(SettingsActivity::class.intent)
+                                }
+                            },
+                        )
+                    }
                 }
             }
-        },
-        snackbarHost = { SnackbarHost(snackbarHostState) },
-    ) { padding ->
-        val contentModifier = Modifier
-            .fillMaxSize()
-            .padding(padding)
-
-        if (showAbout) {
-            AboutPage(
-                state = AboutUiState(
-                    appName = "ClashNeo",
-                    versionName = io.github.neo.clash.BuildConfig.VERSION_NAME,
-                    versionCode = io.github.neo.clash.BuildConfig.VERSION_CODE,
-                ),
-                modifier = contentModifier,
-            )
-            return@Scaffold
         }
+    }
+}
 
-        when (selectedTab) {
-            Tab.Control -> ControlPage(
-                state = tunnel,
-                modifier = contentModifier,
-                onToggle = controller::toggleTunnel,
-                onRefresh = controller::refreshAll,
-                onOpenLogs = onOpenLogs,
-                onOpenNetworkSettings = { context.startActivity(NetworkSettingsActivity::class.intent) },
-            )
-
-            Tab.Proxy -> ProxyPage(
-                state = proxies,
-                modifier = contentModifier,
-                onSelect = controller::selectProxy,
-            )
-
-            Tab.Profiles -> ProfilesPage(
-                state = profiles,
-                modifier = contentModifier,
-                onActivate = controller::activateProfile,
-            )
-
-            Tab.Settings -> SettingsPage(
-                state = SettingsUiState(),
-                modifier = contentModifier,
-                onNavigate = { route ->
-                    when (route) {
-                        SettingsRoute.About -> showAbout = true
-                        SettingsRoute.Network -> context.startActivity(NetworkSettingsActivity::class.intent)
-                        else -> context.startActivity(SettingsActivity::class.intent)
-                    }
-                },
+/** Bottom navigation bar shared by every tab. */
+@Composable
+private fun MiuixBottomBar(
+    selected: Int,
+    onSelect: (Int) -> Unit,
+) {
+    NavigationBar {
+        Tab.entries.forEachIndexed { index, tab ->
+            NavigationBarItem(
+                selected = selected == index,
+                onClick = { onSelect(index) },
+                icon = tab.icon,
+                label = stringResource(tab.labelRes),
             )
         }
     }

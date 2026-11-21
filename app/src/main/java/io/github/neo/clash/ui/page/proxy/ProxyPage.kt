@@ -1,24 +1,28 @@
 // SPDX-License-Identifier: GPL-3.0-only
 package io.github.neo.clash.ui.page.proxy
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import io.github.neo.clash.R
 import io.github.neo.clash.ui.ProxyGroupUiState
 import io.github.neo.clash.ui.ProxyUiState
+import io.github.neo.clash.ui.widget.MiuixPageScaffold
 import io.github.neo.clash.ui.widget.SettingsEntry
 import io.github.neo.clash.ui.widget.SettingsSection
 import top.yukonga.miuix.kmp.basic.Icon
@@ -41,39 +45,35 @@ fun ProxyPage(
     modifier: Modifier = Modifier,
     onSelect: (group: String, node: String) -> Unit,
 ) {
-    val scrollModifier = modifier.fillMaxSize()
-
     when {
         state.error != null -> MessageState(
-            title = "Proxies unavailable",
+            title = stringResource(R.string.proxy_unavailable),
             body = state.error,
-            modifier = scrollModifier,
+            modifier = modifier.fillMaxSize(),
         )
 
         state.isEmpty && state.loading -> MessageState(
-            title = "Loading proxies…",
-            body = "Waiting for the core to report its groups.",
-            modifier = scrollModifier,
+            title = stringResource(R.string.proxy_loading),
+            body = stringResource(R.string.proxy_loading_body),
+            modifier = modifier.fillMaxSize(),
         )
 
         state.isEmpty -> MessageState(
-            title = "No proxies",
-            body = "Start the tunnel to load proxy groups.",
-            modifier = scrollModifier,
+            title = stringResource(R.string.proxy_empty),
+            body = stringResource(R.string.proxy_empty_body),
+            modifier = modifier.fillMaxSize(),
         )
 
-        else -> LazyColumn(
-            modifier = scrollModifier,
-            contentPadding = androidx.compose.foundation.layout.PaddingValues(
-                start = 12.dp,
-                end = 12.dp,
-                top = 12.dp,
-                bottom = 16.dp,
-            ),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
+        else -> MiuixPageScaffold(
+            title = stringResource(R.string.tab_proxy),
+            modifier = modifier,
+            horizontalPadding = 12.dp,
+            verticalPadding = 12.dp,
         ) {
-            items(state.groups, key = { it.name }) { group ->
-                ProxyGroupSection(group = group, onSelect = onSelect)
+            state.groups.forEach { group ->
+                item(key = group.name) {
+                    ProxyGroupSection(group = group, onSelect = onSelect)
+                }
             }
         }
     }
@@ -92,37 +92,45 @@ private fun ProxyGroupSection(
 ) {
     val payload = group.group
 
-    SettingsSection(title = group.name) {
-        if (payload == null) {
-            SettingsEntry(
-                title = "Failed to load",
-                summary = group.error ?: "Unknown error",
-            )
-            return@SettingsSection
-        }
+    Box(modifier = Modifier.padding(bottom = 4.dp)) {
+        SettingsSection(title = group.name) {
+            if (payload == null) {
+                SettingsEntry(
+                    title = stringResource(R.string.proxy_group_failed),
+                    summary = group.error ?: stringResource(R.string.proxy_group_unknown_error),
+                )
+                return@SettingsSection
+            }
 
-        if (payload.proxies.isEmpty()) {
-            SettingsEntry(title = "No nodes")
-            return@SettingsSection
-        }
+            if (payload.proxies.isEmpty()) {
+                SettingsEntry(title = stringResource(R.string.proxy_group_no_nodes))
+                return@SettingsSection
+            }
 
-        payload.proxies.forEach { proxy ->
-            val selected = proxy.name == payload.now
-            SettingsEntry(
-                title = proxy.title.ifBlank { proxy.name },
-                summary = proxy.subtitle.takeIf { it.isNotBlank() },
-                enabled = group.selectable,
-                onClick = if (group.selectable) {
-                    { onSelect(group.name, proxy.name) }
-                } else {
-                    null
-                },
-                trailing = if (selected) {
-                    { SelectedMark() }
-                } else {
-                    null
-                },
-            )
+            payload.proxies.forEach { proxy ->
+                val selected = proxy.name == payload.now
+                SettingsEntry(
+                    title = proxy.title.ifBlank { proxy.name },
+                    summary = proxy.subtitle.takeIf { it.isNotBlank() },
+                    enabled = group.selectable,
+                    onClick = if (group.selectable) {
+                        { onSelect(group.name, proxy.name) }
+                    } else {
+                        null
+                    },
+                    trailing = {
+                        // The tick scales in, so switching a node reads as a change rather than a
+                        // redraw of the whole list.
+                        AnimatedVisibility(
+                            visible = selected,
+                            enter = scaleIn(),
+                            exit = scaleOut(),
+                        ) {
+                            SelectedMark()
+                        }
+                    },
+                )
+            }
         }
     }
 }

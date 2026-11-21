@@ -1,26 +1,33 @@
 // SPDX-License-Identifier: GPL-3.0-only
 package io.github.neo.clash.ui.page.about
 
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.OpenInNew
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import io.github.neo.clash.ui.widget.SettingsEntry
+import io.github.neo.clash.R
+import io.github.neo.clash.ui.widget.MiuixBackButton
+import io.github.neo.clash.ui.widget.MiuixNavigationItemWidget
+import io.github.neo.clash.ui.widget.MiuixPageScaffold
 import io.github.neo.clash.ui.widget.SettingsSection
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.Text
@@ -53,80 +60,109 @@ data class AboutUiState(
 fun AboutPage(
     state: AboutUiState,
     modifier: Modifier = Modifier,
+    onBack: () -> Unit = {},
 ) {
     val uriHandler = LocalUriHandler.current
 
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(bottom = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(4.dp),
+    // A slow breathing pulse on the wordmark: enough motion to signal "this is the identity
+    // block" without competing with the content below it.
+    val pulse by rememberInfiniteTransition(label = "about-pulse").animateFloat(
+        initialValue = 0.97f,
+        targetValue = 1.03f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 2600),
+            repeatMode = RepeatMode.Reverse,
+        ),
+        label = "about-pulse-scale",
+    )
+
+    MiuixPageScaffold(
+        title = stringResource(R.string.settings_about),
+        modifier = modifier,
+        navigationIcon = { MiuixBackButton(onClick = onBack) },
+        horizontalPadding = 12.dp,
+        verticalPadding = 12.dp,
     ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 28.dp),
-            contentAlignment = Alignment.Center,
-        ) {
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(6.dp),
+        item {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 20.dp),
+                contentAlignment = Alignment.Center,
             ) {
-                Text(
-                    text = state.appName,
-                    fontSize = 22.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    textAlign = TextAlign.Center,
-                    color = MiuixTheme.colorScheme.onSurface,
-                )
-                Text(
-                    text = if (state.versionCode > 0) {
-                        "${state.versionName} (${state.versionCode})"
-                    } else {
-                        state.versionName
-                    },
-                    fontSize = 13.sp,
-                    color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    Text(
+                        text = state.appName,
+                        modifier = Modifier.scale(pulse),
+                        fontSize = 22.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MiuixTheme.colorScheme.onSurface,
+                    )
+                    Text(
+                        text = if (state.versionCode > 0) {
+                            "${state.versionName} (${state.versionCode})"
+                        } else {
+                            state.versionName
+                        },
+                        fontSize = 13.sp,
+                        color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                    )
+                }
+            }
+        }
+
+        item {
+            SettingsSection(title = stringResource(R.string.about_section_project)) {
+                MiuixNavigationItemWidget(
+                    title = stringResource(R.string.about_source_code),
+                    description = state.sourceUrl,
+                    onClick = { uriHandler.openUri(state.sourceUrl) },
                 )
             }
         }
 
-        SettingsSection(title = "Project") {
-            SettingsEntry(
-                title = "Source code",
-                summary = state.sourceUrl,
-                onClick = { uriHandler.openUri(state.sourceUrl) },
-                trailing = { LinkIcon() },
-            )
+        item {
+            SettingsSection(title = stringResource(R.string.about_section_credits)) {
+                MiuixNavigationItemWidget(
+                    title = state.upstreamName,
+                    description = stringResource(R.string.about_upstream),
+                    onClick = { uriHandler.openUri(state.upstreamUrl) },
+                )
+                MiuixNavigationItemWidget(
+                    title = state.kernelName,
+                    description = stringResource(R.string.about_kernel),
+                    onClick = { uriHandler.openUri(state.kernelUrl) },
+                )
+            }
         }
 
-        SettingsSection(title = "Credits") {
-            SettingsEntry(
-                title = state.upstreamName,
-                summary = "Upstream project this is based on",
-                onClick = { uriHandler.openUri(state.upstreamUrl) },
-                trailing = { LinkIcon() },
-            )
-            SettingsEntry(
-                title = state.kernelName,
-                summary = "Proxy kernel",
-                onClick = { uriHandler.openUri(state.kernelUrl) },
-                trailing = { LinkIcon() },
-            )
-        }
-
-        SettingsSection(title = "License") {
-            SettingsEntry(
-                title = "GNU General Public License v3.0",
-                summary = "This app is free software and comes with ABSOLUTELY NO WARRANTY.",
-            )
+        item {
+            SettingsSection(title = stringResource(R.string.about_section_license)) {
+                Box(modifier = Modifier.padding(16.dp)) {
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text(
+                            text = stringResource(R.string.about_license_name),
+                            fontSize = 16.sp,
+                            color = MiuixTheme.colorScheme.onSurface,
+                        )
+                        Text(
+                            text = stringResource(R.string.about_license_summary),
+                            fontSize = 13.sp,
+                            color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                        )
+                    }
+                }
+            }
         }
     }
 }
 
+/** Small outbound-link glyph for rows that leave the app. */
 @Composable
-private fun LinkIcon() {
+internal fun LinkIcon() {
     Icon(
         modifier = Modifier.size(20.dp),
         imageVector = Icons.AutoMirrored.Rounded.OpenInNew,

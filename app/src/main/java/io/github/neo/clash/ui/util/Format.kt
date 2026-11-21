@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
 package io.github.neo.clash.ui.util
 
+import android.content.res.Resources
+import io.github.neo.clash.R
 import io.github.neo.clash.core.model.Traffic
 import io.github.neo.clash.core.util.trafficDownload
 import io.github.neo.clash.core.util.trafficTotal
@@ -35,9 +37,18 @@ data class TrafficSummary(
  * user acts on (did the subscription refresh?), and the XML UI's profile list uses the same
  * granularity, so both lists read the same.
  *
- * @return null when [updatedAt] is zero or negative, which means "never updated".
+ * Takes [resources] rather than reading from a `Context` so the unit strings stay localisable: a
+ * hard-coded "min" would be the only untranslated word on an otherwise translated screen.
+ *
+ * @return null when [updatedAt] is non-positive, which means "never updated".
  */
-fun formatElapsed(updatedAt: Long, now: Long = System.currentTimeMillis()): String? {
+fun formatElapsed(
+    updatedAt: Long,
+    resources: Resources,
+    now: Long = System.currentTimeMillis(),
+): String? {
+    // `updatedAt` arrives from the service, where 0 is the "never" sentinel. Negative values would
+    // mean clock skew rather than a real timestamp, so both are treated as "unknown".
     if (updatedAt <= 0L)
         return null
 
@@ -48,11 +59,11 @@ fun formatElapsed(updatedAt: Long, now: Long = System.currentTimeMillis()): Stri
     val days = TimeUnit.MILLISECONDS.toDays(elapsed)
 
     return when {
-        minutes < 1 -> "<1 min"
-        minutes < 60 -> "$minutes min"
-        hours < 24 -> "$hours h"
-        days < 30 -> "$days d"
-        days < 365 -> "${days / 30} mo"
-        else -> "${days / 365} y"
+        minutes < 1 -> resources.getString(R.string.elapsed_less_than_minute)
+        minutes < 60 -> resources.getString(R.string.elapsed_minutes, minutes)
+        hours < 24 -> resources.getString(R.string.elapsed_hours, hours)
+        days < 30 -> resources.getString(R.string.elapsed_days, days)
+        days < 365 -> resources.getString(R.string.elapsed_months, days / 30)
+        else -> resources.getString(R.string.elapsed_years, days / 365)
     }
 }

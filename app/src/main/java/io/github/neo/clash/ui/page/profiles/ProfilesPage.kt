@@ -1,30 +1,34 @@
 // SPDX-License-Identifier: GPL-3.0-only
 package io.github.neo.clash.ui.page.profiles
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalResources
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import io.github.neo.clash.R
 import io.github.neo.clash.service.model.Profile
 import io.github.neo.clash.ui.ProfilesUiState
 import io.github.neo.clash.ui.util.formatElapsed
+import io.github.neo.clash.ui.widget.MiuixPageScaffold
 import io.github.neo.clash.ui.widget.SettingsEntry
 import io.github.neo.clash.ui.widget.SettingsSection
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.theme.MiuixTheme
-import java.util.UUID
 
 /**
  * The 配置 (Profiles) tab.
@@ -40,44 +44,40 @@ fun ProfilesPage(
     modifier: Modifier = Modifier,
     onActivate: (Profile) -> Unit,
 ) {
-    val scrollModifier = modifier.fillMaxSize()
-
     when {
         state.error != null -> MessageState(
-            title = "Profiles unavailable",
+            title = stringResource(R.string.profiles_unavailable),
             body = state.error,
-            modifier = scrollModifier,
+            modifier = modifier.fillMaxSize(),
         )
 
         state.profiles.isEmpty() && state.loading -> MessageState(
-            title = "Loading profiles…",
-            body = "Reading the profile list from the service.",
-            modifier = scrollModifier,
+            title = stringResource(R.string.profiles_loading),
+            body = stringResource(R.string.profiles_loading_body),
+            modifier = modifier.fillMaxSize(),
         )
 
         state.profiles.isEmpty() -> MessageState(
-            title = "No profiles",
-            body = "Import a profile from Settings to get started.",
-            modifier = scrollModifier,
+            title = stringResource(R.string.profiles_empty),
+            body = stringResource(R.string.profiles_empty_body),
+            modifier = modifier.fillMaxSize(),
         )
 
-        else -> LazyColumn(
-            modifier = scrollModifier,
-            contentPadding = androidx.compose.foundation.layout.PaddingValues(
-                start = 12.dp,
-                end = 12.dp,
-                top = 12.dp,
-                bottom = 16.dp,
-            ),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
+        else -> MiuixPageScaffold(
+            title = stringResource(R.string.tab_profiles),
+            modifier = modifier,
+            horizontalPadding = 12.dp,
+            verticalPadding = 12.dp,
         ) {
-            items(state.profiles, key = { it.uuid.toString() }) { profile ->
-                ProfileRow(
-                    profile = profile,
-                    switching = state.switching == profile.uuid,
-                    anySwitching = state.switching != null,
-                    onActivate = onActivate,
-                )
+            state.profiles.forEach { profile ->
+                item(key = profile.uuid.toString()) {
+                    ProfileRow(
+                        profile = profile,
+                        switching = state.switching == profile.uuid,
+                        anySwitching = state.switching != null,
+                        onActivate = onActivate,
+                    )
+                }
             }
         }
     }
@@ -90,32 +90,48 @@ private fun ProfileRow(
     anySwitching: Boolean,
     onActivate: (Profile) -> Unit,
 ) {
-    SettingsSection(title = profile.name) {
-        val detail = buildList {
-            add(profile.type.name)
-            formatElapsed(profile.updatedAt)?.let { add("updated $it") }
-            if (profile.pending) add("pending")
-        }.joinToString(" · ")
+    Box(modifier = Modifier.padding(bottom = 4.dp)) {
+        SettingsSection(title = profile.name) {
+            val detail = buildList {
+                add(profile.type.name)
+                formatElapsed(profile.updatedAt, LocalResources.current)?.let {
+                    add(stringResource(R.string.profile_updated_at, it))
+                }
+                if (profile.pending) add(stringResource(R.string.profile_pending))
+            }.joinToString(" · ")
 
-        SettingsEntry(
-            title = if (profile.active) "Active" else "Tap to activate",
-            summary = detail,
-            enabled = !anySwitching && !profile.active,
-            onClick = if (!anySwitching && !profile.active) {
-                { onActivate(profile) }
-            } else {
-                null
-            },
-            trailing = when {
-                switching -> {
-                    { Text("Switching…", fontSize = 13.sp, color = MiuixTheme.colorScheme.onSurfaceVariantSummary) }
-                }
-                profile.active -> {
-                    { ActiveMark() }
-                }
-                else -> null
-            },
-        )
+            val actionable = !anySwitching && !profile.active
+
+            SettingsEntry(
+                title = stringResource(
+                    if (profile.active) R.string.profile_active else R.string.profile_tap_to_activate,
+                ),
+                summary = detail,
+                enabled = actionable,
+                onClick = if (actionable) {
+                    { onActivate(profile) }
+                } else {
+                    null
+                },
+                trailing = {
+                    when {
+                        switching -> Text(
+                            text = stringResource(R.string.profile_switching),
+                            fontSize = 13.sp,
+                            color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                        )
+
+                        else -> AnimatedVisibility(
+                            visible = profile.active,
+                            enter = scaleIn(),
+                            exit = scaleOut(),
+                        ) {
+                            ActiveMark()
+                        }
+                    }
+                },
+            )
+        }
     }
 }
 

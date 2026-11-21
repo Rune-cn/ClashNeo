@@ -85,3 +85,7 @@ miuix-glass = { module = "top.yukonga.miuix.kmp:miuix-glass-android", version.re
 miuix-glass-icons = { module = "top.yukonga.miuix.kmp:miuix-glass-icons-android", version.ref = "miuix" }
 miuix-blur = { module = "top.yukonga.miuix.kmp:miuix-blur-android", version.ref = "miuix" }
 miuix-icons = { module = "top.yukonga.miuix.kmp:miuix-icons-android", version.ref = "miuix" }
+# Navigation host (NavDisplay / NavBackStack / predictive back). Required by the ported nav layer.
+miuix-nav = { module = "top.yukonga.miuix.kmp:miuix-nav-android", version.ref = "miuix" }
+# Preference rows (ArrowPreference / WindowDropdownPreference). Required by the ported widgets.
+miuix-preference = { module = "top.yukonga.miuix.kmp:miuix-preference-android", version.ref = "miuix" }
