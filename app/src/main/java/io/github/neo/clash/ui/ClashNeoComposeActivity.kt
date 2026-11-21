@@ -45,6 +45,12 @@ import io.github.neo.clash.R
 import io.github.neo.clash.SettingsActivity
 import io.github.neo.clash.common.util.intent
 import io.github.neo.clash.ui.page.about.AboutPage
+import io.github.neo.clash.ui.page.access.AccessControlPage
+import io.github.neo.clash.ui.page.access.AccessControlUiState
+import io.github.neo.clash.ui.page.network.NetworkSettingsPage
+import io.github.neo.clash.ui.page.network.NetworkSettingsUiState
+import io.github.neo.clash.ui.page.override.OverrideSettingsPage
+import io.github.neo.clash.ui.page.override.OverrideSettingsUiState
 import io.github.neo.clash.ui.page.about.AboutUiState
 import io.github.neo.clash.ui.page.control.ControlPage
 import io.github.neo.clash.ui.page.profiles.ProfilesPage
@@ -115,14 +121,29 @@ class ClashNeoComposeActivity : ComponentActivity() {
             // Hoisted above ClashNeoTheme: the theme has to be able to read the settings that it
             // is about to apply, so the state cannot live inside the themed subtree.
             var themeState by remember { mutableStateOf(ThemeUiState()) }
+            // Hoisted here (not inside the sub-page) so the switches keep their values when the
+            // user navigates back to the tabs and returns.
+            var networkState by remember { mutableStateOf(NetworkSettingsUiState()) }
+            var accessState by remember { mutableStateOf(AccessControlUiState()) }
+            var overrideState by remember { mutableStateOf(OverrideSettingsUiState()) }
 
             ClashNeoTheme(
                 useOs4 = themeState.useMiuixOs4,
                 darkTheme = themeState.themeMode.resolveDark(),
+                // These three were previously dropped on the floor: the theme took only the dark
+                // flag, so the palette picker and the dynamic-colour switch did nothing.
+                useDynamicColor = themeState.useMiuixMonet && themeState.useDynamicColor,
+                paletteStyle = themeState.paletteStyle,
             ) {
                 ClashNeoApp(
                     controller = controller,
                     themeState = themeState,
+                    networkState = networkState,
+                    onNetworkStateChange = { networkState = it },
+                    accessState = accessState,
+                    onAccessStateChange = { accessState = it },
+                    overrideState = overrideState,
+                    onOverrideStateChange = { overrideState = it },
                     onThemeStateChange = { themeState = it },
                     onOpenLogs = { openLogs() },
                 )
@@ -161,6 +182,9 @@ private enum class SubPage {
     None,
     About,
     Theme,
+    Network,
+    AccessControl,
+    Override,
 }
 
 private enum class Tab(val labelRes: Int, val icon: ImageVector) {
@@ -183,6 +207,12 @@ private fun ClashNeoApp(
     controller: ClashUiController,
     themeState: ThemeUiState,
     onThemeStateChange: (ThemeUiState) -> Unit,
+    networkState: NetworkSettingsUiState,
+    onNetworkStateChange: (NetworkSettingsUiState) -> Unit,
+    accessState: AccessControlUiState,
+    onAccessStateChange: (AccessControlUiState) -> Unit,
+    overrideState: OverrideSettingsUiState,
+    onOverrideStateChange: (OverrideSettingsUiState) -> Unit,
     onOpenLogs: () -> Unit,
 ) {
     val pagerState = rememberPagerState(pageCount = { Tab.entries.size })
@@ -265,6 +295,44 @@ private fun ClashNeoApp(
                     return@Scaffold
                 }
 
+                SubPage.Network -> {
+                    NetworkSettingsPage(
+                        state = networkState,
+                        onStateChange = onNetworkStateChange,
+                        modifier = Modifier.fillMaxSize(),
+                        outerPadding = PaddingValues(bottom = padding.calculateBottomPadding()),
+                        onBack = { subPage = SubPage.None },
+                        onOpenAccessControl = { subPage = SubPage.AccessControl },
+                    )
+                    return@Scaffold
+                }
+
+                SubPage.AccessControl -> {
+                    AccessControlPage(
+                        state = accessState,
+                        onStateChange = onAccessStateChange,
+                        modifier = Modifier.fillMaxSize(),
+                        outerPadding = PaddingValues(bottom = padding.calculateBottomPadding()),
+                        onBack = { subPage = SubPage.None },
+                    )
+                    return@Scaffold
+                }
+
+                SubPage.Override -> {
+                    OverrideSettingsPage(
+                        state = overrideState,
+                        onStateChange = onOverrideStateChange,
+                        // The core owns these vocabularies; they are passed in rather than
+                        // duplicated here so a core change does not silently desync the pickers.
+                        logLevels = listOf("info", "warning", "error", "debug", "silent"),
+                        modes = listOf("rule", "global", "direct"),
+                        modifier = Modifier.fillMaxSize(),
+                        outerPadding = PaddingValues(bottom = padding.calculateBottomPadding()),
+                        onBack = { subPage = SubPage.None },
+                    )
+                    return@Scaffold
+                }
+
                 SubPage.None -> Unit
             }
 
@@ -312,9 +380,7 @@ private fun ClashNeoApp(
                             onToggle = controller::toggleTunnel,
                             onRefresh = controller::refreshAll,
                             onOpenLogs = onOpenLogs,
-                            onOpenNetworkSettings = {
-                                context.startActivity(NetworkSettingsActivity::class.intent)
-                            },
+                            onOpenNetworkSettings = { subPage = SubPage.Network },
                         )
 
                         Tab.Proxy -> ProxyPage(
@@ -339,8 +405,10 @@ private fun ClashNeoApp(
                                 when (route) {
                                     SettingsRoute.About -> subPage = SubPage.About
                                     SettingsRoute.Theme -> subPage = SubPage.Theme
-                                    SettingsRoute.Network ->
-                                        context.startActivity(NetworkSettingsActivity::class.intent)
+                                    SettingsRoute.Network -> subPage = SubPage.Network
+                                    SettingsRoute.AccessControl ->
+                                        subPage = SubPage.AccessControl
+                                    SettingsRoute.Override -> subPage = SubPage.Override
                                     else ->
                                         context.startActivity(SettingsActivity::class.intent)
                                 }
