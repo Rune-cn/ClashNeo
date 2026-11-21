@@ -261,4 +261,7 @@
     <string name="override_log_level">日志级别</string>
     <string name="add_profile">新增設定檔</string>
     <string name="licenses_intro">本應用程式所用元件及其授權條款。</string>
+    <string name="logcat_waiting">正在等待日誌輸出…</string>
+    <string name="logcat_stopped">日誌服務未執行</string>
+    <string name="logcat">即時日誌</string>
 </resources>

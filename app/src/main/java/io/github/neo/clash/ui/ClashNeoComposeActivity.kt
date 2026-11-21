@@ -35,6 +35,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -59,8 +60,10 @@ import androidx.lifecycle.lifecycleScope
 import io.github.neo.clash.BuildConfig
 import io.github.neo.clash.NetworkSettingsActivity
 import io.github.neo.clash.R
+import io.github.neo.clash.LogcatService
 import io.github.neo.clash.SettingsActivity
 import io.github.neo.clash.common.util.intent
+import io.github.neo.clash.util.logsDir
 import io.github.neo.clash.design.store.UiStore.Companion.mainActivityAlias
 import io.github.neo.clash.ui.animation.predictiveback.appNavTransition
 import io.github.neo.clash.ui.library.FloatingBottomBar
@@ -101,6 +104,9 @@ import io.github.neo.clash.ui.page.theme.ThemeMode
 import io.github.neo.clash.ui.page.theme.ThemeSettingsPage
 import io.github.neo.clash.ui.page.theme.ThemeUiState
 import io.github.neo.clash.ui.page.licenses.LicensesPage
+import io.github.neo.clash.ui.page.logcat.LogcatLineUi
+import io.github.neo.clash.ui.page.logcat.LogcatPage
+import io.github.neo.clash.ui.page.logcat.LogcatUiState
 import io.github.neo.clash.ui.theme.ClashNeoTheme
 import io.github.neo.clash.ui.theme.getMiuixAppBarColor
 import io.github.neo.clash.ui.theme.miuixBlurEffect
@@ -109,6 +115,7 @@ import io.github.neo.clash.ui.widget.MiuixComponentHost
 import io.github.neo.clash.ui.widget.MiuixGlassNavigationBar
 import kotlin.math.absoluteValue
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import top.yukonga.miuix.kmp.basic.Icon
@@ -127,8 +134,8 @@ import top.yukonga.miuix.kmp.blur.rememberLayerBackdrop
 import top.yukonga.miuix.kmp.blur.textureBlur
 import top.yukonga.miuix.kmp.nav.core.NavCornerClipMode
 import top.yukonga.miuix.kmp.nav.core.NavDisplay
+import top.yukonga.miuix.kmp.nav.core.NavKey
 import top.yukonga.miuix.kmp.nav.core.NavDisplayEffects
-import top.yukonga.miuix.kmp.nav.core.rememberNavBackStack
 import top.yukonga.miuix.kmp.nav.transition.NavSwipeDirection
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
@@ -343,7 +350,14 @@ private fun ClashNeoApp(
     // handler in the screen. An entry-level `BackHandler`/`PredictiveBackHandler` would consume the
     // gesture first and leave nothing to preview — that is exactly why the previous hand-written
     // handler produced no animation on some pages and a plain slide on others.
-    val backStack = rememberNavBackStack(Route.Main)
+    // A plain state list, not `rememberNavBackStack`: the latter restores its saved contents *and*
+    // re-adds the initial key, so after `recreate()` (which the dark-mode switch triggers) the stack
+    // held two `Main` entries and NavDisplay threw "Duplicate contentKey on the back stack". Being
+    // reset to the root on recreation is the correct behaviour here anyway, since the sub-page state
+    // below is hoisted in the activity and is rebuilt too.
+    // Typed as NavKey: `SnapshotStateList` is invariant, so a list of `Route` cannot be passed to
+    // NavDisplay even though Route implements NavKey.
+    val backStack = remember { mutableStateListOf<NavKey>(Route.Main) }
 
     val navigateTo: (Route) -> Unit = { route ->
         if (backStack.lastOrNull() != route) backStack.add(route)
@@ -601,6 +615,24 @@ private fun ClashNeoApp(
                     )
                 }
 
+                entry<Route.Logcat>(swipeDismiss = swipeDirection) {
+                    var logcatLines by remember { mutableStateOf(emptyList<LogcatLineUi>()) }
+                    LaunchedEffect(Unit) {
+                        while (true) {
+                            logcatLines = readNewestLogLines(context)
+                            delay(1000)
+                        }
+                    }
+                    LogcatPage(
+                        state = LogcatUiState(
+                            lines = logcatLines,
+                            running = LogcatService.running,
+                        ),
+                        modifier = Modifier.fillMaxSize(),
+                        onBack = popBack,
+                    )
+                }
+
                 entry<Route.Licenses>(swipeDismiss = swipeDirection) {
                     LicensesPage(
                         state = LicensesUiState(),
@@ -751,4 +783,36 @@ private fun MiuixBottomBar(
             }
         }
     }
+}
+
+/**
+ * Reads the newest log file, newest line first.
+ *
+ * The live view polls rather than subscribing to the service: `LogcatReader` is a plain file reader
+ * and the service exposes no stream the UI can attach to. One second is frequent enough to read as
+ * "live" without re-reading the whole file noticeably often.
+ *
+ * Returns an empty list when no log file exists yet, which is the normal state before the first
+ * launch of the log service.
+ */
+private fun readNewestLogLines(context: android.content.Context): List<LogcatLineUi> {
+    val newest = context.logsDir.listFiles()
+        ?.mapNotNull { io.github.neo.clash.design.model.LogFile.parseFromFileName(it.name) }
+        ?.maxByOrNull { it.date.time }
+        ?: return emptyList()
+
+    return runCatching {
+        io.github.neo.clash.log.LogcatReader(context, newest).use { reader ->
+            reader.readAll()
+                .asReversed()
+                .map { message ->
+                    LogcatLineUi(
+                        time = java.text.SimpleDateFormat("HH:mm:ss", java.util.Locale.US)
+                            .format(message.time),
+                        level = message.level.name,
+                        message = message.message,
+                    )
+                }
+        }
+    }.getOrDefault(emptyList())
 }

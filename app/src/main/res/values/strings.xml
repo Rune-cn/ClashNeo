@@ -280,4 +280,7 @@
     <string name="override_log_level">Log level</string>
     <string name="add_profile">Add profile</string>
     <string name="licenses_intro">Components this application links against, with their licences.</string>
+    <string name="logcat_waiting">Waiting for log output…</string>
+    <string name="logcat_stopped">The log service is not running</string>
+    <string name="logcat">Live log</string>
 </resources>
