@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 package io.github.neo.clash.ui
 
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.PredictiveBackHandler
@@ -71,6 +72,29 @@ import io.github.neo.clash.ui.page.theme.ThemeSettingsPage
 import io.github.neo.clash.ui.page.theme.ThemeMode
 import io.github.neo.clash.ui.page.theme.ThemeUiState
 import io.github.neo.clash.ui.theme.ClashNeoTheme
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.only
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.sp
+import io.github.neo.clash.ui.library.FloatingBottomBar
+import io.github.neo.clash.ui.library.FloatingBottomBarMode
+import io.github.neo.clash.ui.theme.rememberMiuixBlurBackdrop
+import top.yukonga.miuix.kmp.basic.Icon
+import top.yukonga.miuix.kmp.basic.NavigationItem
+import top.yukonga.miuix.kmp.basic.Text
+import top.yukonga.miuix.kmp.blur.BlendColorEntry
+import top.yukonga.miuix.kmp.blur.BlurColors
+import top.yukonga.miuix.kmp.blur.layerBackdrop
+import top.yukonga.miuix.kmp.blur.rememberLayerBackdrop
+import top.yukonga.miuix.kmp.blur.textureBlur
+import top.yukonga.miuix.kmp.theme.MiuixTheme
 import io.github.neo.clash.ui.theme.getMiuixAppBarColor
 import io.github.neo.clash.ui.theme.miuixBlurEffect
 import top.yukonga.miuix.kmp.blur.LayerBackdrop
@@ -311,9 +335,30 @@ private fun ClashNeoApp(
         }
     }
 
-    // OS4 forces the floating bar on: its glass pill *is* the OS4 navigation affordance, so the
-    // preference only applies to the OS3 presentation.
+    // Mirrors the reference decision order exactly:
+    //   - OS4 always floats (its glass pill *is* the OS4 navigation affordance),
+    //   - OS3 floats only when the preference says so,
+    //   - the blur mode degrades by API level rather than by preference, because LiquidGlass needs
+    //     render effects (33+) and plain Blur needs the blur path below that.
     val floatingBar = themeState.useMiuixOs4 || themeState.useAppleFloatingBar
+    val floatingMode = when {
+        themeState.useBlur && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU ->
+            FloatingBottomBarMode.LiquidGlass
+        themeState.useBlur -> FloatingBottomBarMode.Blur
+        else -> FloatingBottomBarMode.None
+    }
+
+    // Two distinct backdrops, as in the reference:
+    //   floatingBackdrop records the whole page so the pill can refract it;
+    //   miuixBackdrop is the OS3 blur surface and is null when blur is off.
+    val floatingBackdrop = rememberLayerBackdrop()
+    val miuixBackdrop = rememberMiuixBlurBackdrop(themeState.useBlur)
+
+    // Labels must be resolved inside a composable, so the item list is rebuilt when the locale
+    // changes rather than captured once.
+    val topLevelItems = Tab.entries.map { tab ->
+        NavigationItem(label = stringResource(tab.labelRes), icon = tab.icon)
+    }
 
     MiuixComponentHost(
         useOs4 = false,
@@ -323,8 +368,11 @@ private fun ClashNeoApp(
             bottomBar = {
                 MiuixBottomBar(
                     selected = pagerState.currentPage,
-                    backdrop = scopeState.contentBackdrop,
+                    items = topLevelItems,
                     floating = floatingBar,
+                    floatingMode = floatingMode,
+                    floatingBackdrop = floatingBackdrop,
+                    miuixBackdrop = miuixBackdrop,
                     onSelect = { index ->
                         subPage = SubPage.None
                         scope.launch { pagerState.animateScrollToPage(index) }
@@ -416,9 +464,17 @@ private fun ClashNeoApp(
 
             HorizontalPager(
                 state = pagerState,
+                // Exactly one backdrop is attached, and which one depends on the bar style:
+                // a floating pill refracts the *whole* page, so the page must be the recorded
+                // subtree; a flush bar only blurs the strip behind itself. Attaching both (or the
+                // host's generic backdrop) is what made blur invisible: the sampler and the
+                // recorded content ended up on the same or unrelated nodes.
                 modifier = Modifier
                     .fillMaxSize()
-                    .then(scopeState.contentBackdropModifier),
+                    .then(
+                        if (floatingBar) Modifier.layerBackdrop(floatingBackdrop)
+                        else miuixBackdrop?.let { Modifier.layerBackdrop(it) } ?: Modifier,
+                    ),
                 // No content padding here: each page receives the bottom inset as `outerPadding`
                 // and appends it to its own scroll content padding. Doing both counted the bar
                 // height twice and left a dead gap at the end of every list.
@@ -501,52 +557,85 @@ private fun ThemeMode.resolveDark(): Boolean = when (this) {
 private fun MiuixBottomBar(
     selected: Int,
     onSelect: (Int) -> Unit,
-    backdrop: LayerBackdrop?,
+    items: List<NavigationItem>,
     floating: Boolean,
+    floatingMode: FloatingBottomBarMode,
+    floatingBackdrop: LayerBackdrop,
+    miuixBackdrop: LayerBackdrop?,
 ) {
-    val barColor = backdrop.getMiuixAppBarColor()
-
-    val bar: @Composable () -> Unit = {
-        NavigationBar(color = barColor) {
-            Tab.entries.forEachIndexed { index, tab ->
-                NavigationBarItem(
-                    selected = selected == index,
-                    onClick = { onSelect(index) },
-                    icon = tab.icon,
-                    label = stringResource(tab.labelRes),
-                )
-            }
+    Box(modifier = Modifier.fillMaxWidth()) {
+        if (floating) {
+            // Floating pill. Insets keep it clear of the gesture area and of landscape cutouts;
+            // the width cap stops it from stretching into a thin strip on tablets.
+            val horizontalSafe =
+                WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal).asPaddingValues()
+            val bottomMargin = maxOf(
+                24.dp,
+                WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + 8.dp,
+            )
+            FloatingBottomBar(
+                items = items,
+                selectedIndex = { selected },
+                onSelected = onSelect,
+                backdrop = floatingBackdrop,
+                mode = floatingMode,
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(horizontalSafe)
+                    .widthIn(max = 440.dp)
+                    .fillMaxWidth()
+                    .padding(start = 24.dp, end = 24.dp, top = 20.dp, bottom = bottomMargin),
+                iconContent = { item, _ ->
+                    Icon(imageVector = item.icon, contentDescription = null)
+                },
+                labelContent = { item, _ ->
+                    Text(
+                        text = item.label,
+                        fontSize = 11.sp,
+                        lineHeight = 14.sp,
+                        maxLines = 1,
+                        softWrap = false,
+                        overflow = TextOverflow.Visible,
+                    )
+                },
+            )
+            return@Box
         }
-    }
 
-    if (!floating) {
-        // Flat variant: the bar sits flush against the bottom edge and only blurs its own band.
-        Box(modifier = Modifier.miuixBlurEffect(backdrop)) {
-            bar()
-        }
-        return
-    }
-
-    // Floating variant: the bar is inset from every edge and gets a rounded, blurred pill. The
-    // extra bottom margin clears the gesture area so the pill never sits under it.
-    val bottomInset = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(
-                start = 24.dp,
-                end = 24.dp,
-                top = 8.dp,
-                bottom = maxOf(16.dp, bottomInset + 8.dp),
-            ),
-    ) {
+        // Classic bar, flush with the edge. It samples the page backdrop so the content scrolling
+        // underneath shows through instead of being covered by an opaque strip.
+        val blurActive = miuixBackdrop != null
+        val barColor = if (blurActive) Color.Transparent else MiuixTheme.colorScheme.surface
         Box(
             modifier = Modifier
-                .fillMaxWidth()
-                .miuixBlurEffect(backdrop = backdrop, shape = RoundedCornerShape(28.dp))
-                .clip(RoundedCornerShape(28.dp)),
+                .then(
+                    if (blurActive) {
+                        Modifier.textureBlur(
+                            backdrop = miuixBackdrop!!,
+                            shape = RectangleShape,
+                            blurRadius = 25f,
+                            colors = BlurColors(
+                                blendColors = listOf(
+                                    BlendColorEntry(color = MiuixTheme.colorScheme.surface.copy(0.8f)),
+                                ),
+                            ),
+                        )
+                    } else {
+                        Modifier
+                    },
+                )
+                .background(barColor),
         ) {
-            bar()
+            NavigationBar(color = barColor) {
+                items.forEachIndexed { index, item ->
+                    NavigationBarItem(
+                        selected = selected == index,
+                        onClick = { onSelect(index) },
+                        icon = item.icon,
+                        label = item.label,
+                    )
+                }
+            }
         }
     }
 }
