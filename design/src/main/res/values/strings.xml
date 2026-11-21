@@ -379,4 +379,7 @@
     <string name="profile_file">Use a local file for this profile</string>
     <string name="action">Actions</string>
     <string name="commit_changes">Save the changes to this profile</string>
+    <string name="start_logcat">Live log</string>
+    <string name="start_logcat_summary">Stream the running log in real time</string>
+    <string name="no_logs">No saved logs yet</string>
 </resources>
