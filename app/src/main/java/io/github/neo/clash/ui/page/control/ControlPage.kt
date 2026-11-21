@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
@@ -204,8 +205,11 @@ private fun ToggleButton(phase: TunnelPhase, onToggle: () -> Unit) {
         onClick = onToggle,
         modifier = Modifier
             .fillMaxWidth()
-            .height(52.dp)
-            .padding(vertical = 6.dp),
+            // Padding before height: chaining `.height(52.dp).padding(vertical = 6.dp)` shrinks the
+            // content box to 40dp *after* the height is fixed, which clipped the descenders off the
+            // button label. Insetting first and then sizing keeps the full 52dp usable.
+            .padding(vertical = 6.dp)
+            .heightIn(min = 52.dp),
         enabled = !pending,
     ) {
         Text(

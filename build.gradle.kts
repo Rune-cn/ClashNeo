@@ -215,17 +215,39 @@ subprojects {
         }
 
         signingConfigs {
-            val keystore = rootProject.file("signing.properties")
-            if (keystore.exists()) {
-                typedSigningConfigs.create("release") {
-                    val prop = Properties().apply {
-                        keystore.inputStream().use(this::load)
-                    }
+            // Signing is resolved from `signing.properties` first (local developers) and from
+            // environment variables second (CI). Both are optional: when neither is present the
+            // release build type falls back to the debug key, which keeps `assembleRelease`
+            // runnable while still producing an installable APK.
+            val signingProps = rootProject.file("signing.properties")
+            val props = Properties().apply {
+                if (signingProps.exists()) {
+                    signingProps.inputStream().use(this::load)
+                }
+            }
 
-                    storeFile = rootProject.file("release.keystore")
-                    storePassword = prop.getProperty("keystore.password")!!
-                    keyAlias = prop.getProperty("key.alias")!!
-                    keyPassword = prop.getProperty("key.password")!!
+            fun signingValue(propKey: String, envKey: String): String? =
+                props.getProperty(propKey) ?: System.getenv(envKey)
+
+            val storePath = signingValue("keystore.path", "SIGNING_KEY_STORE_PATH")
+                ?: "clashneo-release.jks".takeIf { rootProject.file(it).exists() }
+            val storePassword = signingValue("keystore.password", "SIGNING_STORE_PASSWORD")
+            val alias = signingValue("key.alias", "SIGNING_KEY_ALIAS")
+            val keyPassword = signingValue("key.password", "SIGNING_KEY_PASSWORD")
+
+            if (storePath != null && storePassword != null && alias != null && keyPassword != null) {
+                typedSigningConfigs.create("release") {
+                    storeFile = rootProject.file(storePath)
+                    this.storePassword = storePassword
+                    this.keyAlias = alias
+                    this.keyPassword = keyPassword
+                    // v1/v2 are still required to install on the oldest supported devices; v3 is
+                    // what modern Android prefers. v4 (incremental) is skipped because it only
+                    // helps with `adb install-multiple` and doubles the build output.
+                    enableV1Signing = true
+                    enableV2Signing = true
+                    enableV3Signing = true
+                    enableV4Signing = false
                 }
             }
         }

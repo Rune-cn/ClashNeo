@@ -80,11 +80,6 @@ fun SettingsPage(
                     description = stringResource(R.string.settings_theme_summary),
                     onClick = { onNavigate(SettingsRoute.Theme) },
                 )
-                MiuixNavigationItemWidget(
-                    title = stringResource(R.string.settings_language),
-                    description = stringResource(R.string.settings_language_summary),
-                    onClick = { onNavigate(SettingsRoute.Language) },
-                )
             }
         }
 
@@ -119,7 +114,6 @@ enum class SettingsRoute {
     AccessControl,
     MetaFeatures,
     Theme,
-    Language,
     About,
     Licenses,
 }

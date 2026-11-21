@@ -64,3 +64,9 @@ google-services.json
 
 # MacOS
 .DS_Store
+
+# Release signing material. `release.keystore` is the upstream debug-ish key and stays; the
+# project's own key and its password file must never be committed.
+clashneo-release.jks
+*.jks
+signing.properties

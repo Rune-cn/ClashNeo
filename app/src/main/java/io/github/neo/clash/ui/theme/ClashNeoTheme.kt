@@ -10,6 +10,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 import io.github.neo.clash.ui.page.theme.PaletteStyle
+import io.github.neo.clash.ui.page.theme.ThemeMode
 import top.yukonga.miuix.kmp.material.isRenderEffectSupported
 import top.yukonga.miuix.kmp.theme.ColorSchemeMode
 import top.yukonga.miuix.kmp.theme.MiuixTheme
@@ -63,50 +64,65 @@ private fun PaletteStyle.toMiuix(): MiuixPaletteStyle = when (this) {
 /**
  * Root theme for the Compose surface.
  *
- * Colour is driven by a [ThemeController] rather than a fixed `lightColorScheme()` call, because
- * only the controller forwards [keyColor] / [paletteStyle] / [useDynamicColor] into the generated
- * scheme. Passing a pre-built scheme — the previous implementation — made the palette picker look
- * live while changing nothing on screen.
+ * Colour follows the reference app's two-engine model, which is the part the previous
+ * implementation got wrong:
  *
- * @param useOs4 Render the OS4 glass presentation when the platform supports render effects.
- * @param darkTheme Resolved by the caller: the app's dark-mode preference is a three-way enum, not
- *   a boolean, so resolving it here would duplicate that logic.
- * @param useDynamicColor Follow the system wallpaper (API 31+). Ignored below that, where the
- *   platform cannot supply a palette.
- * @param paletteStyle Which Material palette family to derive from the seed colour.
- * @param keyColor Seed colour used when dynamic colour is off.
+ * - **[useMiuixMonet] on** — the Material "monet" engine derives a full palette from a seed colour.
+ *   [paletteStyle] selects the palette *family*, so the picker visibly changes the UI. When
+ *   [useDynamicColor] is also on (API 31+), the seed comes from the system wallpaper instead of the
+ *   fixed brand seed; the palette family still applies on top of it.
+ * - **[useMiuixMonet] off** — a plain light/dark scheme with no derivation, so [paletteStyle] is
+ *   irrelevant and the picker is hidden by the settings screen.
+ *
+ * The earlier version mapped [useDynamicColor] straight onto `MonetLight`/`MonetDark` and folded
+ * the palette style into the same branch, which made the style picker a no-op whenever dynamic
+ * colour was enabled and made dynamic colour itself resolve to the system accent regardless of the
+ * chosen family.
  */
 @Composable
 fun ClashNeoTheme(
+    themeMode: ThemeMode = ThemeMode.SYSTEM,
     useOs4: Boolean = false,
-    darkTheme: Boolean = isSystemInDarkTheme(),
+    useMiuixMonet: Boolean = true,
     useDynamicColor: Boolean = true,
     paletteStyle: PaletteStyle = PaletteStyle.TONAL_SPOT,
-    keyColor: Color = primaryLight,
+    seedColor: Color = primaryLight,
+    darkTheme: Boolean = isSystemInDarkTheme(),
     content: @Composable () -> Unit,
 ) {
     val os4 = useOs4 && isOs4PlatformSupported
 
-    // Dynamic colour needs API 31+; below that the seed colour is the only source, so the mode
-    // degrades to an explicit light/dark rather than silently rendering an empty palette.
     val supportsDynamic = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
-    val dynamic = useDynamicColor && supportsDynamic
+    val systemSeed = systemAccentSeed()
+    val keyColor = if (useDynamicColor && supportsDynamic) systemSeed else seedColor
 
-    val mode = when {
-        dynamic && darkTheme -> ColorSchemeMode.MonetDark
-        dynamic -> ColorSchemeMode.MonetLight
-        darkTheme -> ColorSchemeMode.Dark
-        else -> ColorSchemeMode.Light
-    }
-
-    val controller = remember(mode, paletteStyle, keyColor, darkTheme) {
-        ThemeController(
-            colorSchemeMode = mode,
-            keyColor = keyColor,
-            paletteStyle = paletteStyle.toMiuix(),
-            colorSpec = MiuixColorSpec.Spec2025,
-            isDark = darkTheme,
-        )
+    val controller = if (useMiuixMonet) {
+        val mode = when (themeMode) {
+            ThemeMode.SYSTEM -> ColorSchemeMode.MonetSystem
+            ThemeMode.LIGHT -> ColorSchemeMode.MonetLight
+            ThemeMode.DARK -> ColorSchemeMode.MonetDark
+        }
+        remember(mode, keyColor, paletteStyle, darkTheme) {
+            ThemeController(
+                colorSchemeMode = mode,
+                keyColor = keyColor,
+                paletteStyle = paletteStyle.toMiuix(),
+                colorSpec = MiuixColorSpec.Spec2025,
+                isDark = darkTheme,
+            )
+        }
+    } else {
+        val mode = when (themeMode) {
+            ThemeMode.SYSTEM -> ColorSchemeMode.System
+            ThemeMode.LIGHT -> ColorSchemeMode.Light
+            ThemeMode.DARK -> ColorSchemeMode.Dark
+        }
+        remember(mode, darkTheme) {
+            ThemeController(
+                colorSchemeMode = mode,
+                isDark = darkTheme,
+            )
+        }
     }
 
     CompositionLocalProvider(
@@ -116,6 +132,23 @@ fun ClashNeoTheme(
         MiuixTheme(controller = controller) {
             content()
         }
+    }
+}
+
+/**
+ * Seed colour taken from the platform's wallpaper palette.
+ *
+ * `android.R.color.system_accent1_500` is the same role the reference app uses; reading it through
+ * the resources system is what lets the value track the wallpaper without requesting any permission.
+ * Falls back to the brand seed before API 31, where the colour does not exist.
+ */
+@Composable
+private fun systemAccentSeed(): Color {
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return primaryLight
+    val context = androidx.compose.ui.platform.LocalContext.current
+    return remember(context) {
+        androidx.core.content.ContextCompat.getColor(context, android.R.color.system_accent1_500)
+            .let { Color(it) }
     }
 }
 

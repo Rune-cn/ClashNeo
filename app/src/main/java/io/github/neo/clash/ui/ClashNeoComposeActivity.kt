@@ -3,6 +3,7 @@ package io.github.neo.clash.ui
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.animateFloatAsState
@@ -128,11 +129,13 @@ class ClashNeoComposeActivity : ComponentActivity() {
             var overrideState by remember { mutableStateOf(OverrideSettingsUiState()) }
 
             ClashNeoTheme(
+                themeMode = themeState.themeMode,
                 useOs4 = themeState.useMiuixOs4,
-                darkTheme = themeState.themeMode.resolveDark(),
-                // These three were previously dropped on the floor: the theme took only the dark
-                // flag, so the palette picker and the dynamic-colour switch did nothing.
-                useDynamicColor = themeState.useMiuixMonet && themeState.useDynamicColor,
+                // The two switches are independent, exactly as the reference app treats them:
+                // `useMiuixMonet` selects the engine, `useDynamicColor` only the seed source.
+                // Conflating them is what made the palette picker a no-op.
+                useMiuixMonet = themeState.useMiuixMonet,
+                useDynamicColor = themeState.useDynamicColor,
                 paletteStyle = themeState.paletteStyle,
             ) {
                 ClashNeoApp(
@@ -247,6 +250,19 @@ private fun ClashNeoApp(
 
                 null -> Unit
             }
+        }
+    }
+
+    // Back stack, innermost first:
+    //   1. an open sub-page (About/Theme/Network/…) closes,
+    //   2. otherwise a non-first tab returns to the first tab,
+    //   3. otherwise the handler is disabled and the system finishes the activity.
+    // Without this, pressing back inside a sub-page tore the whole app down, because the
+    // sub-page is plain Compose state with nothing for the system to unwind.
+    BackHandler(enabled = subPage != SubPage.None || pagerState.currentPage != 0) {
+        when {
+            subPage != SubPage.None -> subPage = SubPage.None
+            else -> scope.launch { pagerState.animateScrollToPage(0) }
         }
     }
 
