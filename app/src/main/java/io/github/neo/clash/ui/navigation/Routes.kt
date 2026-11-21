@@ -32,4 +32,7 @@ sealed interface Route : NavKey {
 
     @Serializable
     data object Override : Route
+
+    @Serializable
+    data object AppSettings : Route
 }

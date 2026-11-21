@@ -55,6 +55,11 @@ fun SettingsPage(
                     description = stringResource(R.string.settings_override_summary),
                     onClick = { onNavigate(SettingsRoute.Override) },
                 )
+                MiuixNavigationItemWidget(
+                    title = stringResource(R.string.settings_app),
+                    description = stringResource(R.string.settings_app_summary),
+                    onClick = { onNavigate(SettingsRoute.AppSettings) },
+                )
             }
         }
 
@@ -114,6 +119,7 @@ enum class SettingsRoute {
     AccessControl,
     MetaFeatures,
     Theme,
+    AppSettings,
     About,
     Licenses,
 }

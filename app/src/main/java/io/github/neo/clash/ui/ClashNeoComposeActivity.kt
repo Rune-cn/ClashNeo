@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 package io.github.neo.clash.ui
 
+import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -54,6 +55,7 @@ import io.github.neo.clash.NetworkSettingsActivity
 import io.github.neo.clash.R
 import io.github.neo.clash.SettingsActivity
 import io.github.neo.clash.common.util.intent
+import io.github.neo.clash.design.store.UiStore.Companion.mainActivityAlias
 import io.github.neo.clash.ui.page.about.AboutPage
 import io.github.neo.clash.ui.page.access.AccessControlPage
 import io.github.neo.clash.ui.page.access.AccessControlUiState
@@ -62,6 +64,8 @@ import io.github.neo.clash.ui.page.network.NetworkSettingsUiState
 import io.github.neo.clash.ui.page.override.OverrideSettingsPage
 import io.github.neo.clash.ui.page.override.OverrideSettingsUiState
 import io.github.neo.clash.ui.page.about.AboutUiState
+import io.github.neo.clash.ui.page.appsettings.AppSettingsPage
+import io.github.neo.clash.ui.page.appsettings.AppSettingsUiState
 import io.github.neo.clash.ui.page.control.ControlPage
 import io.github.neo.clash.ui.page.profiles.ProfilesPage
 import io.github.neo.clash.ui.page.proxy.ProxyPage
@@ -95,6 +99,7 @@ import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.sp
 import io.github.neo.clash.ui.library.FloatingBottomBar
+import io.github.neo.clash.ui.widget.MiuixGlassNavigationBar
 import io.github.neo.clash.ui.library.FloatingBottomBarMode
 import io.github.neo.clash.ui.theme.rememberMiuixBlurBackdrop
 import top.yukonga.miuix.kmp.basic.Icon
@@ -173,6 +178,7 @@ class ClashNeoComposeActivity : ComponentActivity() {
             var networkState by remember { mutableStateOf(NetworkSettingsUiState()) }
             var accessState by remember { mutableStateOf(AccessControlUiState()) }
             var overrideState by remember { mutableStateOf(OverrideSettingsUiState()) }
+            var appSettingsState by remember { mutableStateOf(AppSettingsUiState()) }
 
             ClashNeoTheme(
                 themeMode = themeState.themeMode,
@@ -193,6 +199,10 @@ class ClashNeoComposeActivity : ComponentActivity() {
                     onAccessStateChange = { accessState = it },
                     overrideState = overrideState,
                     onOverrideStateChange = { overrideState = it },
+                    appSettingsState = appSettingsState,
+                    onAppSettingsStateChange = { appSettingsState = it },
+                    onRequireRecreate = { recreate() },
+                    onHideIconChange = { hidden -> setLauncherIconVisible(!hidden) },
                     onThemeStateChange = { themeState = it },
                     onOpenLogs = { openLogs() },
                 )
@@ -213,6 +223,26 @@ class ClashNeoComposeActivity : ComponentActivity() {
      * Mirrors `MainActivity`'s choice so the two entry points cannot disagree about which log
      * screen a user lands on.
      */
+    /**
+     * Shows or hides the launcher entry.
+     *
+     * Toggles the `MainActivityAlias` component rather than the activity itself: the alias is the
+     * component that carries the launcher intent-filter, so disabling it hides the icon without
+     * making the activity unreachable from inside the app. `DONT_KILL_APP` keeps the current
+     * process alive so the switch does not close the screen the user is looking at.
+     */
+    private fun setLauncherIconVisible(visible: Boolean) {
+        packageManager.setComponentEnabledSetting(
+            mainActivityAlias,
+            if (visible) {
+                PackageManager.COMPONENT_ENABLED_STATE_ENABLED
+            } else {
+                PackageManager.COMPONENT_ENABLED_STATE_DISABLED
+            },
+            PackageManager.DONT_KILL_APP,
+        )
+    }
+
     private fun openLogs() {
         val target = if (LogcatService.running) LogcatActivity::class else LogsActivity::class
         startActivity(target.intent)
@@ -252,6 +282,10 @@ private fun ClashNeoApp(
     onAccessStateChange: (AccessControlUiState) -> Unit,
     overrideState: OverrideSettingsUiState,
     onOverrideStateChange: (OverrideSettingsUiState) -> Unit,
+    appSettingsState: AppSettingsUiState,
+    onAppSettingsStateChange: (AppSettingsUiState) -> Unit,
+    onRequireRecreate: () -> Unit,
+    onHideIconChange: (Boolean) -> Unit,
     onOpenLogs: () -> Unit,
 ) {
     val pagerState = rememberPagerState(pageCount = { Tab.entries.size })
@@ -360,6 +394,7 @@ private fun ClashNeoApp(
                     MiuixBottomBar(
                         selected = pagerState.currentPage,
                         items = topLevelItems,
+                        useOs4 = themeState.useMiuixOs4,
                         floating = floatingBar,
                         floatingMode = floatingMode,
                         floatingBackdrop = floatingBackdrop,
@@ -431,6 +466,7 @@ private fun ClashNeoApp(
                                             SettingsRoute.Network -> navigateTo(Route.Network)
                                             SettingsRoute.AccessControl -> navigateTo(Route.AccessControl)
                                             SettingsRoute.Override -> navigateTo(Route.Override)
+                                            SettingsRoute.AppSettings -> navigateTo(Route.AppSettings)
                                             else -> context.startActivity(
                                                 SettingsActivity::class.intent,
                                             )
@@ -482,6 +518,22 @@ private fun ClashNeoApp(
                     )
                 }
 
+                entry<Route.AppSettings>(swipeDismiss = swipeDirection) {
+                    AppSettingsPage(
+                        state = appSettingsState,
+                        onStateChange = onAppSettingsStateChange,
+                        darkModeLabels = listOf(
+                            stringResource(io.github.neo.clash.design.R.string.follow_system_android_10),
+                            stringResource(io.github.neo.clash.design.R.string.always_light),
+                            stringResource(io.github.neo.clash.design.R.string.always_dark),
+                        ),
+                        modifier = Modifier.fillMaxSize(),
+                        onBack = popBack,
+                        onRequireRecreate = onRequireRecreate,
+                        onHideIconChange = onHideIconChange,
+                    )
+                }
+
                 entry<Route.Override>(swipeDismiss = swipeDirection) {
                     OverrideSettingsPage(
                         state = overrideState,
@@ -517,21 +569,44 @@ private fun MiuixBottomBar(
     selected: Int,
     onSelect: (Int) -> Unit,
     items: List<NavigationItem>,
+    useOs4: Boolean,
     floating: Boolean,
     floatingMode: FloatingBottomBarMode,
     floatingBackdrop: LayerBackdrop,
     miuixBackdrop: LayerBackdrop?,
 ) {
     Box(modifier = Modifier.fillMaxWidth()) {
-        if (floating) {
-            // Floating pill. Insets keep it clear of the gesture area and of landscape cutouts;
-            // the width cap stops it from stretching into a thin strip on tablets.
-            val horizontalSafe =
+        // Three presentations, and they are genuinely different widgets:
+        //   OS4            -> MiuixGlassNavigationBar (glass pills, glass icons)
+        //   OS3 + floating -> FloatingBottomBar (liquid-glass pill with a sliding indicator)
+        //   OS3 + flush    -> plain NavigationBar, blurred behind
+        // Treating OS4 as "the floating bar with different blur" was wrong: the glass bar lays the
+        // items out differently and draws per-item glass, so it cannot be approximated by the pill.
+        if (useOs4) {
+            val horizontalSafeInsets =
                 WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal).asPaddingValues()
             val bottomMargin = maxOf(
                 24.dp,
                 WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + 8.dp,
             )
+            MiuixGlassNavigationBar(
+                items = items,
+                selectedIndex = selected,
+                onSelect = onSelect,
+                backdrop = floatingBackdrop,
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(horizontalSafeInsets)
+                    .widthIn(max = 440.dp)
+                    .fillMaxWidth()
+                    .padding(start = 24.dp, end = 24.dp, top = 20.dp, bottom = bottomMargin),
+            )
+            return@Box
+        }
+
+        if (floating) {
+            val bottomMargin = 12.dp +
+                WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
             FloatingBottomBar(
                 items = items,
                 selectedIndex = { selected },
@@ -540,10 +615,7 @@ private fun MiuixBottomBar(
                 mode = floatingMode,
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
-                    .padding(horizontalSafe)
-                    .widthIn(max = 440.dp)
-                    .fillMaxWidth()
-                    .padding(start = 24.dp, end = 24.dp, top = 20.dp, bottom = bottomMargin),
+                    .padding(bottom = bottomMargin),
                 iconContent = { item, _ ->
                     Icon(imageVector = item.icon, contentDescription = null)
                 },
@@ -561,7 +633,7 @@ private fun MiuixBottomBar(
             return@Box
         }
 
-        // Classic bar, flush with the edge. It samples the page backdrop so the content scrolling
+        // Classic flush bar. Transparent when a backdrop exists so the content scrolling
         // underneath shows through instead of being covered by an opaque strip.
         val blurActive = miuixBackdrop != null
         val barColor = if (blurActive) Color.Transparent else MiuixTheme.colorScheme.surface
