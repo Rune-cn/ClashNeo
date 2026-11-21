@@ -303,4 +303,7 @@
     <string name="duplicate">复制</string>
     <string name="profile_fetch_summary">从来源下载最新版本</string>
     <string name="profile_duplicate_summary">创建此配置的副本</string>
+    <string name="profile_importing">正在下载配置…</string>
+    <string name="profile_imported">配置已导入</string>
+    <string name="profile_import_failed">导入配置失败</string>
 </resources>

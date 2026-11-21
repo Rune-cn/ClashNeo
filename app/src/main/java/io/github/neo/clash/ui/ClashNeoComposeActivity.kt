@@ -179,7 +179,9 @@ class ClashNeoComposeActivity : ComponentActivity() {
         ActivityResultContracts.OpenDocument(),
     ) { uri ->
         if (uri != null) {
-            controller.createProfile(
+            // The service reads the document through the persisted permission granted by
+            // OpenDocument, so the URI stays valid after this activity is gone.
+            controller.importProfile(
                 type = Profile.Type.File,
                 name = uri.lastPathSegment?.substringAfterLast('/') ?: "profile",
                 source = uri.toString(),
@@ -525,7 +527,7 @@ private fun ClashNeoApp(
                             onDelete = controller::deleteProfile,
                             onAddFromFile = onPickProfileFile,
                             onAddFromUrl = { url ->
-                                controller.createProfile(
+                                controller.importProfile(
                                     type = Profile.Type.Url,
                                     name = url.substringAfterLast('/').substringBefore('?')
                                         .ifBlank { "profile" },

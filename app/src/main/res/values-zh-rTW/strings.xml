@@ -291,4 +291,7 @@
     <string name="duplicate">複製</string>
     <string name="profile_fetch_summary">從來源下載最新版本</string>
     <string name="profile_duplicate_summary">建立此設定檔的副本</string>
+    <string name="profile_importing">正在下載設定檔…</string>
+    <string name="profile_imported">設定檔已匯入</string>
+    <string name="profile_import_failed">匯入設定檔失敗</string>
 </resources>

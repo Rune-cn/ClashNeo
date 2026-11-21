@@ -629,6 +629,9 @@ class ClashUiController(
                         interval = TimeUnit.MINUTES.toMillis(intervalMinutes),
                         ageSecretKey = ageSecretKey,
                     )
+                    // `patch` only writes the pending row. Without `commit` the edits never reach
+                    // the imported copy and the profile keeps running its old configuration.
+                    commit(uuid, null)
                 }
             }
 
@@ -656,7 +659,190 @@ class ClashUiController(
         }
 
         scope.launch {
-            val result = runCatching { withProfile { update(profile.uuid) } }
+            val result = runCatching {
+                withProfile {
+                    // A profile that was created but never imported has no configuration to refresh;
+                    // `update` would schedule a fetch for content that does not exist yet. `commit`
+                    // is what moves it from pending to imported.
+                    if (profile.imported) update(profile.uuid) else commit(profile.uuid, null)
+                }
+            }
+            result.onSuccess { refreshProfiles() }
+                .onFailure { error ->
+                    Log.w("Update profile: $error", error)
+                    postMessage(
+                        error.message ?: context.getString(R.string.profile_update_failed_generic),
+                        isError = true,
+                    )
+                }
+        }
+    }
+
+    /** Copies a profile, including its source and interval. */
+    fun duplicateProfile(profile: Profile) {
+        scope.launch {
+            val result = runCatching { withProfile { clone(profile.uuid) } }
+            result.onSuccess { refreshProfiles() }
+                .onFailure { error ->
+                    Log.w("Duplicate profile: $error", error)
+                    postMessage(
+                        error.message ?: context.getString(R.string.profile_duplicate_failed),
+                        isError = true,
+                    )
+                }
+        }
+    }
+
+    /** Deletes a profile. Irreversible on the core side, so the host confirms first. */
+    fun deleteProfile(profile: Profile) {
+        scope.launch {
+            val result = runCatching { withProfile { delete(profile.uuid) } }
+            result.onSuccess { refreshProfiles() }
+                .onFailure { error ->
+                    Log.w("Delete profile: $error", error)
+                    postMessage(
+                        error.message ?: context.getString(R.string.profile_delete_failed),
+                        isError = true,
+                    )
+                }
+        }
+    }
+
+    /**
+     * Creates a profile and actually downloads it.
+     *
+     * `create` alone only inserts a *pending* row with an empty `config.yaml` — the profile has no
+     * content, cannot be activated, and shows nothing. The content arrives through `commit`, which
+     * runs `ProfileProcessor.apply`: it fetches the source, writes the real configuration and moves
+     * the profile from pending to imported. That call was missing, which is why adding a profile
+     * produced a row that did nothing.
+     *
+     * `ProfileProcessor` also reads the `subscription-userinfo` and `profile-update-interval`
+     * headers during the same fetch, so traffic figures and the auto-update interval land on the
+     * profile without this class doing anything.
+     */
+    fun importProfile(
+        type: Profile.Type,
+        name: String,
+        source: String,
+        intervalMinutes: Long = 0L,
+        ageSecretKey: String? = null,
+    ) {
+        if (name.isBlank() || source.isBlank()) {
+            postMessage(context.getString(R.string.add_profile_invalid), isError = true)
+            return
+        }
+
+        scope.launch {
+            postMessage(context.getString(R.string.profile_importing))
+
+            val result = runCatching {
+                withProfile {
+                    val uuid = create(type, name, source, ageSecretKey)
+                    // Patch first so `commit` fetches with the real name and interval rather than
+                    // the placeholder values `create` stored.
+                    patch(
+                        uuid = uuid,
+                        name = name,
+                        source = source,
+                        interval = TimeUnit.MINUTES.toMillis(intervalMinutes),
+                        ageSecretKey = ageSecretKey,
+                    )
+                    commit(uuid, null)
+                    uuid
+                }
+            }
+
+            result.onSuccess { uuid ->
+                refreshProfiles()
+
+                // First usable profile: activate it, otherwise the tunnel still has nothing to run
+                // and the app looks broken even after a successful import.
+                val hasActive = _profiles.value.profiles.any { it.active }
+                if (!hasActive) {
+                    runCatching { withProfile { setActive(queryByUUID(uuid) ?: return@withProfile) } }
+                        .onFailure { Log.w("Activate after import: $it", it) }
+                    refreshProfiles()
+                }
+
+                postMessage(context.getString(R.string.profile_imported))
+            }.onFailure { error ->
+                Log.w("Import profile: $error", error)
+                postMessage(
+                    error.message ?: context.getString(R.string.profile_import_failed),
+                    isError = true,
+                )
+            }
+        }
+    }
+
+    /**
+     * Persists edits to a profile.
+     *
+     * [intervalMinutes] is minutes because that is what the UI collects; the core stores
+     * milliseconds, so the conversion happens here rather than at the call site where it is easy to
+     * get wrong by a factor of 60.
+     */
+    fun saveProfile(
+        uuid: UUID,
+        name: String,
+        source: String,
+        intervalMinutes: Long,
+        ageSecretKey: String?,
+    ) {
+        if (name.isBlank() || source.isBlank()) {
+            postMessage(context.getString(R.string.add_profile_invalid), isError = true)
+            return
+        }
+
+        scope.launch {
+            val result = runCatching {
+                withProfile {
+                    patch(
+                        uuid = uuid,
+                        name = name,
+                        source = source,
+                        interval = TimeUnit.MINUTES.toMillis(intervalMinutes),
+                        ageSecretKey = ageSecretKey,
+                    )
+                    // `patch` only writes the pending row. Without `commit` the edits never reach
+                    // the imported copy and the profile keeps running its old configuration.
+                    commit(uuid, null)
+                }
+            }
+
+            result.onSuccess { refreshProfiles() }
+                .onFailure { error ->
+                    Log.w("Save profile: $error", error)
+                    postMessage(
+                        error.message ?: context.getString(R.string.add_profile_failed),
+                        isError = true,
+                    )
+                }
+        }
+    }
+
+    /**
+     * Re-downloads a profile from its source ("拉取配置").
+     *
+     * Only meaningful for URL profiles; a file or external profile has nothing to fetch, so the
+     * call is skipped rather than issued and failed by the core.
+     */
+    fun updateProfile(profile: Profile) {
+        if (profile.type == Profile.Type.File || profile.type == Profile.Type.External) {
+            postMessage(context.getString(R.string.profile_update_not_applicable), isError = true)
+            return
+        }
+
+        scope.launch {
+            val result = runCatching {
+                withProfile {
+                    // A profile that was created but never imported has no configuration to refresh;
+                    // `update` would schedule a fetch for content that does not exist yet. `commit`
+                    // is what moves it from pending to imported.
+                    if (profile.imported) update(profile.uuid) else commit(profile.uuid, null)
+                }
+            }
             result.onSuccess { refreshProfiles() }
                 .onFailure { error ->
                     Log.w("Update profile: $error", error)
@@ -733,8 +919,32 @@ class ClashUiController(
         if (profile.active)
             return
 
+        // A pending profile has no configuration yet, so activating it would leave the tunnel
+        // pointing at nothing. Download it first, then activate in the same action — the previous
+        // version emitted a "needs import" message and stopped, which left the user with a row that
+        // could not be used at all.
         if (!profile.imported) {
-            _messages.value = ChannelMessages.NeedImport(profile.uuid)
+            scope.launch {
+                postMessage(context.getString(R.string.profile_importing))
+
+                val imported = runCatching {
+                    withProfile { commit(profile.uuid, null) }
+                }
+
+                if (imported.isFailure) {
+                    val error = imported.exceptionOrNull()
+                    Log.w("Import on activate: $error", error)
+                    postMessage(
+                        error?.message ?: context.getString(R.string.profile_import_failed),
+                        isError = true,
+                    )
+                    return@launch
+                }
+
+                refreshProfiles()
+                val refreshed = _profiles.value.profiles.firstOrNull { it.uuid == profile.uuid }
+                if (refreshed != null) activateProfile(refreshed)
+            }
             return
         }
 

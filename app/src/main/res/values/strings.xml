@@ -310,4 +310,7 @@
     <string name="duplicate">Duplicate</string>
     <string name="profile_fetch_summary">Download the latest version from its source</string>
     <string name="profile_duplicate_summary">Create a copy of this profile</string>
+    <string name="profile_importing">Downloading the profile…</string>
+    <string name="profile_imported">Profile imported</string>
+    <string name="profile_import_failed">Failed to import the profile</string>
 </resources>
