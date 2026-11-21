@@ -6,6 +6,7 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.Spring
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -58,6 +59,7 @@ import top.yukonga.miuix.kmp.theme.MiuixTheme
 fun ControlPage(
     state: TunnelUiState,
     modifier: Modifier = Modifier,
+    outerPadding: PaddingValues = PaddingValues(),
     onToggle: () -> Unit,
     onRefresh: () -> Unit,
     onOpenLogs: () -> Unit,
@@ -66,6 +68,7 @@ fun ControlPage(
     MiuixPageScaffold(
         title = stringResource(R.string.tab_control),
         modifier = modifier,
+        outerPadding = outerPadding,
         horizontalPadding = 12.dp,
         verticalPadding = 12.dp,
     ) {

@@ -1,14 +1,15 @@
 // SPDX-License-Identifier: GPL-3.0-only
 package io.github.neo.clash.ui.widget
 
-import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.blur.LayerBackdrop
 import top.yukonga.miuix.kmp.blur.layerBackdrop
 import top.yukonga.miuix.kmp.blur.rememberLayerBackdrop
@@ -51,10 +52,9 @@ internal val LocalMiuixTopBarBackdrop = compositionLocalOf<LayerBackdrop?> { nul
 /**
  * Root Miuix surface for both UI styles.
  *
- * The [Scaffold] is always present, even when only the Miuix family uses it, because it composes
- * its content inside a `SubcomposeLayout`. Making it conditional would move the navigation tree out
- * of a subcomposition that is disposed in the same frame, which crashes with "Could not resolve
- * state for movable content" when switching styles.
+ * This host deliberately does not install a `Scaffold`: it only publishes the ambient scope and the
+ * surface colour. Bars (top and bottom) belong to the screen that owns them, and stacking a
+ * bar-less Scaffold in the middle of the tree only consumed insets without rendering anything.
  *
  * @param useOs4 Render the OS4 (glass) presentation when the platform supports render effects.
  * @param useBlur Enable the OS3 backdrop blur path.
@@ -78,10 +78,15 @@ fun MiuixComponentHost(
     }
 
     CompositionLocalProvider(LocalMiuixComponentScope provides scope) {
-        Scaffold(
-            modifier = modifier,
-            containerColor = containerColor,
-            contentWindowInsets = WindowInsets(0),
+        // A Box, not a Scaffold: this host only publishes the ambient scope. Wrapping the tree in a
+        // Scaffold here added one more layer that consumed window insets and contributed no bars,
+        // so its content padding was silently ignored while still shortening nothing — and it made
+        // the page's own Scaffold the third one in the chain. The screen hosts provide the real
+        // bars.
+        Box(
+            modifier = modifier
+                .fillMaxSize()
+                .background(containerColor),
         ) {
             content(scope)
         }

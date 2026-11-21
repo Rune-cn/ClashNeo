@@ -9,6 +9,7 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.Spring
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
@@ -28,6 +29,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import io.github.neo.clash.BuildConfig
@@ -231,7 +233,10 @@ private fun ClashNeoApp(
                 modifier = Modifier
                     .fillMaxSize()
                     .then(scopeState.contentBackdropModifier),
-                contentPadding = padding,
+                // No content padding here: each page receives the bottom inset as `outerPadding`
+                // and appends it to its own scroll content padding. Doing both counted the bar
+                // height twice and left a dead gap at the end of every list.
+                contentPadding = PaddingValues(),
                 beyondViewportPageCount = 1,
                 overscrollEffect = null,
             ) { page ->
@@ -247,6 +252,10 @@ private fun ClashNeoApp(
                     label = "page-scale",
                 )
 
+                val pageOuterPadding = PaddingValues(
+                    bottom = padding.calculateBottomPadding(),
+                )
+
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
@@ -259,6 +268,7 @@ private fun ClashNeoApp(
                         Tab.Control -> ControlPage(
                             state = tunnel,
                             modifier = Modifier.fillMaxSize(),
+                            outerPadding = pageOuterPadding,
                             onToggle = controller::toggleTunnel,
                             onRefresh = controller::refreshAll,
                             onOpenLogs = onOpenLogs,
@@ -270,18 +280,21 @@ private fun ClashNeoApp(
                         Tab.Proxy -> ProxyPage(
                             state = proxies,
                             modifier = Modifier.fillMaxSize(),
+                            outerPadding = pageOuterPadding,
                             onSelect = controller::selectProxy,
                         )
 
                         Tab.Profiles -> ProfilesPage(
                             state = profiles,
                             modifier = Modifier.fillMaxSize(),
+                            outerPadding = pageOuterPadding,
                             onActivate = controller::activateProfile,
                         )
 
                         Tab.Settings -> SettingsPage(
                             state = SettingsUiState(),
                             modifier = Modifier.fillMaxSize(),
+                            outerPadding = pageOuterPadding,
                             onNavigate = { route ->
                                 when (route) {
                                     SettingsRoute.About -> showAbout = true

@@ -5,6 +5,7 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -42,6 +43,7 @@ import top.yukonga.miuix.kmp.theme.MiuixTheme
 fun ProfilesPage(
     state: ProfilesUiState,
     modifier: Modifier = Modifier,
+    outerPadding: PaddingValues = PaddingValues(),
     onActivate: (Profile) -> Unit,
 ) {
     when {
@@ -66,6 +68,7 @@ fun ProfilesPage(
         else -> MiuixPageScaffold(
             title = stringResource(R.string.tab_profiles),
             modifier = modifier,
+            outerPadding = outerPadding,
             horizontalPadding = 12.dp,
             verticalPadding = 12.dp,
         ) {

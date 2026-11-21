@@ -2,6 +2,7 @@
 package io.github.neo.clash.ui.page.settings
 
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -32,11 +33,13 @@ data class SettingsUiState(
 fun SettingsPage(
     state: SettingsUiState,
     modifier: Modifier = Modifier,
+    outerPadding: PaddingValues = PaddingValues(),
     onNavigate: (SettingsRoute) -> Unit = {},
 ) {
     MiuixPageScaffold(
         title = stringResource(R.string.tab_settings),
         modifier = modifier,
+        outerPadding = outerPadding,
         horizontalPadding = 12.dp,
         verticalPadding = 12.dp,
     ) {
