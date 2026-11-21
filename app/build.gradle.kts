@@ -5,6 +5,8 @@ import java.nio.file.StandardCopyOption
 plugins {
     kotlin("android")
     kotlin("kapt")
+    // Compose compiler plugin, applied next to Kotlin so the two versions can never drift.
+    id("org.jetbrains.kotlin.plugin.compose")
     id("com.android.application")
 }
 
@@ -26,6 +28,27 @@ dependencies {
     implementation(libs.google.material)
     implementation(libs.quickie.bundled)
     implementation(libs.androidx.activity.ktx)
+
+    // miuix Compose foundation: the new UI lives in `io.github.neo.clash.ui` and is launched by
+    // ComposeMainActivity, in parallel with the existing XML UI.
+    implementation(platform(libs.androidx.compose.bom))
+    implementation(libs.androidx.compose.ui)
+    implementation(libs.androidx.compose.ui.graphics)
+    implementation(libs.androidx.compose.foundation)
+    implementation(libs.androidx.compose.runtime)
+    implementation(libs.androidx.compose.ui.tooling.preview)
+    debugImplementation(libs.androidx.compose.ui.tooling)
+    implementation(libs.androidx.activity.compose)
+    implementation(libs.androidx.lifecycle.runtime.compose)
+    implementation(libs.androidx.compose.material.icons.extended)
+
+    implementation(libs.miuix.core)
+    implementation(libs.miuix.ui)
+    implementation(libs.miuix.material)
+    implementation(libs.miuix.glass)
+    implementation(libs.miuix.glass.icons)
+    implementation(libs.miuix.blur)
+    implementation(libs.miuix.icons)
 }
 
 tasks.getByName("clean", type = Delete::class) {

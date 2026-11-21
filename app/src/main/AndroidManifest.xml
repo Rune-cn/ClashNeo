@@ -71,6 +71,18 @@
             </intent-filter>
         </activity-alias>
 
+        <!--
+            Compose UI host (home / settings / about). Registered as a normal, non-exported
+            activity so the XML UI stays the sole launcher entry point until the migration is
+            complete; it can be started explicitly or via an adb intent filter check.
+        -->
+        <activity
+            android:name=".ui.ClashNeoComposeActivity"
+            android:configChanges="uiMode"
+            android:exported="false"
+            android:label="@string/application_name"
+            android:theme="@style/BootstrapTheme" />
+
         <activity
             android:name=".ExternalControlActivity"
             android:excludeFromRecents="true"

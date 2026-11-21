@@ -1,0 +1,108 @@
+name: Build Compose Debug
+
+# Fast feedback loop for the Miuix Compose UI (home / settings / about).
+#
+# This workflow exists alongside `build-debug.yaml` because it needs one thing that workflow does
+# not: authenticated access to the `top.yukonga.miuix.kmp` GitHub Packages repository. Keeping it
+# separate means the upstream-derived release pipelines stay untouched while the Compose UI is
+# still being brought up.
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - 'app/src/main/java/io/github/neo/clash/ui/**'
+      - 'app/build.gradle.kts'
+      - 'build.gradle.kts'
+      - 'gradle/libs.versions.toml'
+      - 'gradle/wrapper/gradle-wrapper.properties'
+      - '.github/workflows/build-compose-debug.yaml'
+
+# `packages: read` is what lets the Gradle build resolve the miuix snapshots. It is scoped to this
+# job only; other workflows keep their default token permissions.
+permissions:
+  contents: read
+  packages: read
+
+concurrency:
+  group: compose-debug-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  BuildComposeDebug:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Checkout submodules
+        run: git submodule update --init --recursive --force
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      # The Go kernel is compiled as part of the app, so the toolchain has to be present even
+      # though this workflow is about the Compose layer.
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+
+      - name: Apply Go patches
+        run: |
+          cd "$(go env GOROOT)"
+          shopt -s nullglob
+          for p in "$GITHUB_WORKSPACE"/.github/patch/*.patch; do
+            patch --verbose -p 1 < "$p"
+          done
+
+      - name: Cache Go build
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
+      # miuix snapshots live on GitHub Packages and are never anonymous. The build reads
+      # `gpr.user` / `gpr.key` from gradle.properties, so the job token is written there rather
+      # than being put on the command line (where it would show up in logs).
+      - name: Configure GitHub Packages credentials
+        run: |
+          mkdir -p ~/.gradle
+          {
+            echo "gpr.user=${{ github.actor }}"
+            echo "gpr.key=${{ secrets.GITHUB_TOKEN }}"
+          } >> ~/.gradle/gradle.properties
+
+      - name: Update CA
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ca-certificates
+          sudo update-ca-certificates
+          cp -f /etc/ssl/certs/ca-certificates.crt \
+            core/src/foss/golang/clash/component/ca/ca-certificates.crt
+
+      # `-x downloadGeoFiles` avoids depending on the geo-asset release feed for a build that only
+      # has to prove the Compose layer compiles. The APK is therefore not installable as-is.
+      - name: Compile and package
+        run: ./gradlew --no-daemon :app:assembleAlphaDebug -x downloadGeoFiles
+
+      - name: Upload APK
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: clashneo-compose-debug
+          path: app/build/outputs/apk/alpha/debug/*.apk
+          if-no-files-found: warn

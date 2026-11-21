@@ -21,11 +21,8 @@ dependencies {
     implementation(libs.rikkax.multiprocess)
 }
 
-afterEvaluate {
-    android {
-        libraryVariants.forEach {
-            sourceSets[it.name].kotlin.srcDir(buildDir.resolve("generated/ksp/${it.name}/kotlin"))
-            sourceSets[it.name].java.srcDir(buildDir.resolve("generated/ksp/${it.name}/java"))
-        }
-    }
-}
+// KSP registers its `generated/ksp/<variant>/kotlin` and `.../java` outputs on the matching
+// source sets itself. The manual `afterEvaluate { android { libraryVariants.forEach { ... } } }`
+// wiring that used to live here both duplicated that registration and, under AGP 9, forced a cast
+// of the decorated source set to the removed `AndroidLibrarySourceSet` type, which threw a
+// ClassCastException during configuration. Nothing replaces it: the plugin's own wiring suffices.
